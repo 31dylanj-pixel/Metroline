@@ -461,7 +461,42 @@ button {
     background: #3a3936;
 }
 
+/* =========================================================
+   WEEK PROGRESS
+   ========================================================= */
 
+#weekProgressWrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 12px;
+    vertical-align: middle;
+}
+
+#weekProgressBar {
+    display: inline-block;
+    width: 180px;
+    height: 9px;
+    background: rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+#weekProgressFill {
+    display: block;
+    width: 0%;
+    height: 100%;
+    background: #20242a;
+    border-radius: inherit;
+}
+
+#weekProgressPercent {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    min-width: 30px;
+}
 /* ================================
    MOBILE
 ================================ */
