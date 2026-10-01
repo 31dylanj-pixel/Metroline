@@ -1,12 +1,12 @@
 /* =========================================================
    METROLINE
-   Prototype v0.1
+   Prototype v0.2
 ========================================================= */
 
 
-/* ================================
+/* =========================================================
    CANVAS
-================================ */
+========================================================= */
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
@@ -14,13 +14,18 @@ const ctx = canvas.getContext("2d");
 const gameArea = document.getElementById("gameArea");
 
 
-/* ================================
+/* =========================================================
    UI
-================================ */
+========================================================= */
 
-const weekDisplay = document.getElementById("week");
-const scoreDisplay = document.getElementById("score");
-const waitingDisplay = document.getElementById("waiting");
+const weekDisplay =
+    document.getElementById("week");
+
+const scoreDisplay =
+    document.getElementById("score");
+
+const waitingDisplay =
+    document.getElementById("waiting");
 
 const stationCountDisplay =
     document.getElementById("stationCount");
@@ -50,9 +55,9 @@ const playAgain =
     document.getElementById("playAgain");
 
 
-/* ================================
+/* =========================================================
    GAME STATE
-================================ */
+========================================================= */
 
 let width = 0;
 let height = 0;
@@ -65,6 +70,8 @@ let trains = [];
 
 let selectedStation = null;
 
+let drawingLine = false;
+
 let score = 0;
 let week = 1;
 
@@ -76,9 +83,9 @@ let gameOver = false;
 let lastTime = 0;
 
 
-/* ================================
-   COLORS
-================================ */
+/* =========================================================
+   CONSTANTS
+========================================================= */
 
 const LINE_COLORS = [
     "#e85d4a",
@@ -94,36 +101,67 @@ const SHAPES = [
     "square"
 ];
 
+const TRAIN_CAPACITY = 6;
 
-/* ================================
+
+/* =========================================================
    RESIZE
-================================ */
+========================================================= */
 
 function resizeCanvas() {
 
-    const rect = gameArea.getBoundingClientRect();
+    const rect =
+        gameArea.getBoundingClientRect();
 
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr =
+        Math.min(
+            window.devicePixelRatio || 1,
+            2
+        );
 
     width = rect.width;
     height = rect.height;
 
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
+    canvas.width =
+        width * dpr;
 
-    canvas.style.width = width + "px";
-    canvas.style.height = height + "px";
+    canvas.height =
+        height * dpr;
 
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    canvas.style.width =
+        width + "px";
+
+    canvas.style.height =
+        height + "px";
+
+    ctx.setTransform(
+        dpr,
+        0,
+        0,
+        dpr,
+        0,
+        0
+    );
 }
 
 
-window.addEventListener("resize", resizeCanvas);
+window.addEventListener(
+    "resize",
+    resizeCanvas
+);
 
 
-/* ================================
-   DISTANCE
-================================ */
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function random(min, max) {
+
+    return Math.random() *
+        (max - min) +
+        min;
+}
+
 
 function distance(a, b) {
 
@@ -134,54 +172,27 @@ function distance(a, b) {
 }
 
 
-/* ================================
-   RANDOM
-================================ */
-
-function random(min, max) {
-
-    return Math.random() * (max - min) + min;
-}
-
-
-/* ================================
+/* =========================================================
    CREATE STATION
-================================ */
+========================================================= */
 
-function createStation() {
+function createStation(
+    x,
+    y,
+    shape
+) {
 
-    const padding = 70;
+    const station = {
 
-    let station;
+        x,
+        y,
 
-    let attempts = 0;
+        shape,
 
-    do {
+        passengers: [],
 
-        station = {
-            x: random(padding, width - padding),
-            y: random(padding, height - padding),
-
-            shape:
-                SHAPES[
-                    Math.floor(
-                        Math.random() * SHAPES.length
-                    )
-                ],
-
-            passengers: [],
-
-            pulse: 0
-        };
-
-        attempts++;
-
-    } while (
-        stations.some(
-            s => distance(s, station) < 110
-        ) &&
-        attempts < 100
-    );
+        pulse: 0
+    };
 
     stations.push(station);
 
@@ -189,9 +200,9 @@ function createStation() {
 }
 
 
-/* ================================
+/* =========================================================
    INITIAL NETWORK
-================================ */
+========================================================= */
 
 function createInitialNetwork() {
 
@@ -205,36 +216,66 @@ function createInitialNetwork() {
     gameTime = 0;
 
     selectedStation = null;
+    drawingLine = false;
 
     gameOver = false;
     paused = false;
 
-    gameOverScreen.classList.add("hidden");
+    gameOverScreen.classList.add(
+        "hidden"
+    );
 
-    for (let i = 0; i < 7; i++) {
-
-        createStation();
-
-    }
 
     /*
-       Start with two connected stations
-       so the player immediately has
-       something moving.
+       EXACTLY THREE STARTING STATIONS.
+
+       They are intentionally spread
+       around the playable area.
+    */
+
+    createStation(
+        width * 0.28,
+        height * 0.42,
+        "circle"
+    );
+
+    createStation(
+        width * 0.52,
+        height * 0.67,
+        "triangle"
+    );
+
+    createStation(
+        width * 0.72,
+        height * 0.35,
+        "square"
+    );
+
+
+    /*
+       Start with one empty line.
+
+       The player creates its route
+       manually.
     */
 
     lines.push({
+
         id: 0,
 
         color: LINE_COLORS[0],
 
-        stations: [
-            stations[0],
-            stations[1]
-        ]
+        stations: []
+
     });
 
+
+    /*
+       One train.
+    */
+
     trains.push({
+
         line: lines[0],
 
         index: 0,
@@ -243,194 +284,598 @@ function createInitialNetwork() {
 
         speed: 0.00012,
 
+        reverse: false,
+
         passengers: []
+
     });
+
+
+    lineStatus.textContent =
+        "Drag from a station";
 
     updateUI();
 }
 
 
-/* ================================
-   ADD LINE CONNECTION
-================================ */
+/* =========================================================
+   CREATE CONNECTION
+========================================================= */
 
-function connectStations(a, b) {
-
-    if (a === b) return;
-
-    /*
-       Check whether this connection
-       already exists.
-    */
-
-    const exists = lines.some(line => {
-
-        for (let i = 0; i < line.stations.length - 1; i++) {
-
-            const s1 = line.stations[i];
-            const s2 = line.stations[i + 1];
-
-            if (
-                (s1 === a && s2 === b) ||
-                (s1 === b && s2 === a)
-            ) {
-                return true;
-            }
-        }
-
-        return false;
-    });
-
-    if (exists) return;
-
-
-    /*
-       Add the connection to Line 1
-       for the prototype.
-    */
+function addStationToLine(
+    station
+) {
 
     const line = lines[0];
 
-    if (!line.stations.includes(a)) {
-
-        line.stations.push(a);
-
-    }
-
-    if (!line.stations.includes(b)) {
-
-        line.stations.push(b);
-
-    }
-
     /*
-       If there are enough stations,
-       create a second train occasionally.
+       No duplicate consecutive station.
     */
 
     if (
-        line.stations.length >= 4 &&
-        trains.length < 2
+        line.stations[
+            line.stations.length - 1
+        ] === station
     ) {
 
-        trains.push({
-            line: line,
+        return;
 
-            index: 0,
-
-            progress: 0,
-
-            speed: 0.00012,
-
-            passengers: []
-        });
     }
 
+
+    /*
+       LOOP SUPPORT
+
+       If the player drags from the
+       last station back to the first,
+       the line becomes a loop.
+    */
+
+    if (
+        line.stations.length >= 3 &&
+        station === line.stations[0]
+    ) {
+
+        line.loop = true;
+
+        lineStatus.textContent =
+            "Loop line created";
+
+        updateTrainRoute();
+
+        return;
+
+    }
+
+
+    /*
+       Don't insert a station twice
+       unless it's closing a loop.
+    */
+
+    if (
+        line.stations.includes(station)
+    ) {
+
+        return;
+
+    }
+
+
+    line.stations.push(station);
+
+    updateTrainRoute();
+
     lineStatus.textContent =
-        `${line.stations.length} stations connected`;
+        `${line.stations.length} stations on line`;
+}
+
+
+/* =========================================================
+   UPDATE TRAIN ROUTE
+========================================================= */
+
+function updateTrainRoute() {
+
+    const line = lines[0];
+
+    trains.forEach(train => {
+
+        train.line = line;
+
+        train.index = 0;
+
+        train.progress = 0;
+
+        train.reverse = false;
+
+    });
 
     updateUI();
 }
 
 
-/* ================================
+/* =========================================================
+   REMOVE LINE SEGMENT
+========================================================= */
+
+function removeSegment(
+    line,
+    segmentIndex
+) {
+
+    if (
+        line.stations.length < 2
+    ) {
+
+        return;
+
+    }
+
+
+    /*
+       Segment is between:
+
+       stations[segmentIndex]
+       and
+       stations[segmentIndex + 1]
+    */
+
+
+    const a =
+        line.stations[segmentIndex];
+
+    const b =
+        line.stations[
+            segmentIndex + 1
+        ];
+
+
+    /*
+       If this was a loop, deleting
+       the closing section simply
+       opens the loop.
+    */
+
+    if (
+        line.loop &&
+        segmentIndex ===
+        line.stations.length - 1
+    ) {
+
+        line.loop = false;
+
+        lineStatus.textContent =
+            "Loop section removed";
+
+        updateTrainRoute();
+
+        return;
+    }
+
+
+    /*
+       Remove the second station.
+
+       This effectively removes the
+       selected section while keeping
+       the rest of the route.
+    */
+
+    line.stations.splice(
+        segmentIndex + 1,
+        1
+    );
+
+
+    lineStatus.textContent =
+        "Line section removed";
+
+    updateTrainRoute();
+}
+
+
+/* =========================================================
+   POINT TO SEGMENT DISTANCE
+========================================================= */
+
+function distanceToSegment(
+    px,
+    py,
+    ax,
+    ay,
+    bx,
+    by
+) {
+
+    const dx = bx - ax;
+    const dy = by - ay;
+
+    if (
+        dx === 0 &&
+        dy === 0
+    ) {
+
+        return Math.hypot(
+            px - ax,
+            py - ay
+        );
+
+    }
+
+
+    const t = Math.max(
+        0,
+        Math.min(
+            1,
+            (
+                (px - ax) * dx +
+                (py - ay) * dy
+            ) /
+            (dx * dx + dy * dy)
+        )
+    );
+
+
+    const x =
+        ax + t * dx;
+
+    const y =
+        ay + t * dy;
+
+
+    return Math.hypot(
+        px - x,
+        py - y
+    );
+}
+
+
+/* =========================================================
+   FIND LINE SEGMENT
+========================================================= */
+
+function segmentAt(
+    x,
+    y
+) {
+
+    const line = lines[0];
+
+    if (
+        line.stations.length < 2
+    ) {
+
+        return null;
+
+    }
+
+
+    /*
+       Normal segments
+    */
+
+    for (
+        let i = 0;
+        i < line.stations.length - 1;
+        i++
+    ) {
+
+        const a =
+            line.stations[i];
+
+        const b =
+            line.stations[i + 1];
+
+        if (
+            distanceToSegment(
+                x,
+                y,
+                a.x,
+                a.y,
+                b.x,
+                b.y
+            ) < 12
+        ) {
+
+            return {
+                line,
+                index: i
+            };
+
+        }
+
+    }
+
+
+    /*
+       Closing segment of a loop.
+    */
+
+    if (line.loop) {
+
+        const a =
+            line.stations[
+                line.stations.length - 1
+            ];
+
+        const b =
+            line.stations[0];
+
+        if (
+            distanceToSegment(
+                x,
+                y,
+                a.x,
+                a.y,
+                b.x,
+                b.y
+            ) < 12
+        ) {
+
+            return {
+                line,
+                index:
+                    line.stations.length - 1
+            };
+
+        }
+
+    }
+
+
+    return null;
+}
+
+
+/* =========================================================
    STATION HIT TEST
-================================ */
+========================================================= */
 
-function stationAt(x, y) {
+function stationAt(
+    x,
+    y
+) {
 
-    for (let i = stations.length - 1; i >= 0; i--) {
+    for (
+        let i = stations.length - 1;
+        i >= 0;
+        i--
+    ) {
 
-        const station = stations[i];
+        const station =
+            stations[i];
 
         if (
             Math.hypot(
                 station.x - x,
                 station.y - y
-            ) < 24
+            ) < 28
         ) {
 
             return station;
 
         }
+
     }
 
     return null;
 }
 
 
-/* ================================
-   POINTER INPUT
-================================ */
+/* =========================================================
+   POINTER POSITION
+========================================================= */
 
-canvas.addEventListener("pointerdown", event => {
+function pointerPosition(
+    event
+) {
 
-    if (paused || gameOver) return;
+    const rect =
+        canvas.getBoundingClientRect();
 
-    const rect = canvas.getBoundingClientRect();
+    return {
 
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
+        x:
+            event.clientX -
+            rect.left,
 
-    const station = stationAt(x, y);
+        y:
+            event.clientY -
+            rect.top
 
-    if (!station) {
-
-        selectedStation = null;
-
-        return;
-    }
+    };
+}
 
 
-    if (!selectedStation) {
+/* =========================================================
+   POINTER DOWN
+========================================================= */
+
+canvas.addEventListener(
+    "pointerdown",
+    event => {
+
+        if (
+            paused ||
+            gameOver
+        ) {
+
+            return;
+
+        }
+
+
+        const p =
+            pointerPosition(event);
+
+        const station =
+            stationAt(
+                p.x,
+                p.y
+            );
+
+
+        /*
+           Right click removes a section.
+        */
+
+        if (
+            event.button === 2
+        ) {
+
+            const segment =
+                segmentAt(
+                    p.x,
+                    p.y
+                );
+
+            if (segment) {
+
+                removeSegment(
+                    segment.line,
+                    segment.index
+                );
+
+            }
+
+            return;
+        }
+
+
+        if (!station) {
+
+            return;
+
+        }
+
+
+        drawingLine = true;
 
         selectedStation = station;
 
         station.pulse = 1;
 
+        canvas.setPointerCapture(
+            event.pointerId
+        );
+
+
         lineStatus.textContent =
-            "Now choose another station";
+            "Drag to another station";
 
-        return;
     }
+);
 
 
-    connectStations(
-        selectedStation,
-        station
-    );
+/* =========================================================
+   POINTER UP
+========================================================= */
 
-    station.pulse = 1;
+canvas.addEventListener(
+    "pointerup",
+    event => {
 
-    selectedStation = null;
+        if (!drawingLine) {
 
-});
+            return;
+
+        }
 
 
-/* ================================
+        const p =
+            pointerPosition(event);
+
+        const station =
+            stationAt(
+                p.x,
+                p.y
+            );
+
+
+        if (station) {
+
+            addStationToLine(
+                station
+            );
+
+        }
+
+
+        drawingLine = false;
+
+        selectedStation = null;
+
+        try {
+
+            canvas.releasePointerCapture(
+                event.pointerId
+            );
+
+        } catch (_) {}
+
+
+        lineStatus.textContent =
+            lines[0].loop
+                ? "Loop line active"
+                : (
+                    lines[0].stations.length
+                        ? "Drag from a station to extend"
+                        : "Drag from a station"
+                );
+
+    }
+);
+
+
+/* =========================================================
+   DISABLE CONTEXT MENU
+========================================================= */
+
+canvas.addEventListener(
+    "contextmenu",
+    event => {
+
+        event.preventDefault();
+
+    }
+);
+
+
+/* =========================================================
    SPAWN PASSENGER
-================================ */
+========================================================= */
 
 function spawnPassenger() {
 
-    if (stations.length < 2) return;
+    if (
+        stations.length < 2
+    ) {
+
+        return;
+
+    }
+
 
     const origin =
         stations[
             Math.floor(
-                Math.random() * stations.length
+                Math.random() *
+                stations.length
             )
         ];
 
 
     let destination;
 
+
     do {
 
         destination =
             stations[
                 Math.floor(
-                    Math.random() * stations.length
+                    Math.random() *
+                    stations.length
                 )
             ];
 
@@ -441,65 +886,181 @@ function spawnPassenger() {
 
     const passenger = {
 
-        destination: destination,
+        destination,
 
-        age: 0,
+        age: 0
 
-        color: "#57534e"
     };
 
 
-    origin.passengers.push(passenger);
+    origin.passengers.push(
+        passenger
+    );
 
-    passengers.push(passenger);
+    passengers.push(
+        passenger
+    );
+
 }
 
 
-/* ================================
-   PASSENGER BOARDING
-================================ */
+/* =========================================================
+   PASSENGER ICON
+========================================================= */
 
-function processTrainAtStation(train, station) {
+function drawPassengerIcon(
+    ctx,
+    shape,
+    x,
+    y,
+    size
+) {
+
+    ctx.save();
+
+    ctx.translate(
+        x,
+        y
+    );
+
+
+    ctx.fillStyle =
+        "#57534e";
+
+
+    if (
+        shape === "circle"
+    ) {
+
+        ctx.beginPath();
+
+        ctx.arc(
+            0,
+            0,
+            size,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+
+    }
+
+
+    else if (
+        shape === "square"
+    ) {
+
+        ctx.fillRect(
+            -size,
+            -size,
+            size * 2,
+            size * 2
+        );
+
+    }
+
+
+    else if (
+        shape === "triangle"
+    ) {
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            0,
+            -size
+        );
+
+        ctx.lineTo(
+            size,
+            size
+        );
+
+        ctx.lineTo(
+            -size,
+            size
+        );
+
+        ctx.closePath();
+
+        ctx.fill();
+
+    }
+
+
+    ctx.restore();
+}
+
+
+/* =========================================================
+   TRAIN ARRIVAL
+========================================================= */
+
+function processTrainAtStation(
+    train,
+    station
+) {
 
     /*
-       Drop off passengers whose
-       destination is this station.
+       DROP OFF
     */
 
     train.passengers =
-        train.passengers.filter(passenger => {
+        train.passengers.filter(
+            passenger => {
 
-            if (
-                passenger.destination === station
-            ) {
+                if (
+                    passenger.destination ===
+                    station
+                ) {
 
-                score++;
+                    score++;
 
-                return false;
+                    const index =
+                        passengers.indexOf(
+                            passenger
+                        );
+
+                    if (
+                        index !== -1
+                    ) {
+
+                        passengers.splice(
+                            index,
+                            1
+                        );
+
+                    }
+
+                    return false;
+
+                }
+
+                return true;
 
             }
-
-            return true;
-
-        });
+        );
 
 
     /*
-       Pick up waiting passengers.
+       BOARD PASSENGERS
 
-       Train capacity:
-       6 passengers for now.
+       Maximum = 6.
     */
 
     while (
-        train.passengers.length < 6 &&
+        train.passengers.length <
+            TRAIN_CAPACITY &&
         station.passengers.length > 0
     ) {
 
         const passenger =
             station.passengers.shift();
 
-        train.passengers.push(passenger);
+        train.passengers.push(
+            passenger
+        );
 
     }
 
@@ -510,35 +1071,101 @@ function processTrainAtStation(train, station) {
 }
 
 
-/* ================================
+/* =========================================================
    TRAIN UPDATE
-================================ */
+========================================================= */
 
 function updateTrains(delta) {
 
     trains.forEach(train => {
 
-        const line = train.line;
+        const line =
+            train.line;
 
-        if (line.stations.length < 2) {
+
+        if (
+            line.stations.length < 2
+        ) {
+
             return;
+
         }
 
 
+        /*
+           LOOP
+        */
+
+        if (line.loop) {
+
+            train.progress +=
+                train.speed *
+                delta;
+
+
+            if (
+                train.progress >= 1
+            ) {
+
+                train.progress = 0;
+
+                train.index++;
+
+                if (
+                    train.index >=
+                    line.stations.length
+                ) {
+
+                    train.index = 0;
+
+                }
+
+
+                processTrainAtStation(
+                    train,
+                    line.stations[
+                        train.index
+                    ]
+                );
+
+            }
+
+            return;
+
+        }
+
+
+        /*
+           NORMAL LINE
+        */
+
         train.progress +=
-            train.speed * delta;
+            train.speed *
+            delta;
 
 
-        if (train.progress >= 1) {
+        if (
+            train.progress >= 1
+        ) {
 
             train.progress = 0;
 
-            train.index++;
+
+            if (
+                train.reverse
+            ) {
+
+                train.index--;
+
+            } else {
+
+                train.index++;
+
+            }
 
 
             /*
-               Reverse direction when
-               reaching the end.
+               Reverse at the ends.
             */
 
             if (
@@ -565,32 +1192,12 @@ function updateTrains(delta) {
             }
 
 
-            const station =
-                line.stations[train.index];
-
             processTrainAtStation(
                 train,
-                station
+                line.stations[
+                    train.index
+                ]
             );
-
-        }
-
-
-        /*
-           Direction
-        */
-
-        if (train.reverse) {
-
-            train.index--;
-
-            if (train.index < 0) {
-
-                train.index = 0;
-
-                train.reverse = false;
-
-            }
 
         }
 
@@ -599,22 +1206,78 @@ function updateTrains(delta) {
 }
 
 
-/* ================================
-   GET TRAIN POSITION
-================================ */
+/* =========================================================
+   TRAIN POSITION
+========================================================= */
 
-function getTrainPosition(train) {
+function getTrainPosition(
+    train
+) {
 
-    const line = train.line;
+    const line =
+        train.line;
 
-    if (line.stations.length < 2) {
+
+    if (
+        line.stations.length < 2
+    ) {
 
         return null;
 
     }
 
 
-    let index = train.index;
+    /*
+       LOOP
+    */
+
+    if (line.loop) {
+
+        const index =
+            train.index %
+            line.stations.length;
+
+        const nextIndex =
+            (
+                index + 1
+            ) %
+            line.stations.length;
+
+
+        const a =
+            line.stations[index];
+
+        const b =
+            line.stations[nextIndex];
+
+
+        return {
+
+            x:
+                a.x +
+                (
+                    b.x - a.x
+                ) *
+                train.progress,
+
+            y:
+                a.y +
+                (
+                    b.y - a.y
+                ) *
+                train.progress
+
+        };
+
+    }
+
+
+    /*
+       NORMAL LINE
+    */
+
+    let index =
+        train.index;
 
     let nextIndex =
         train.reverse
@@ -624,7 +1287,8 @@ function getTrainPosition(train) {
 
     if (
         nextIndex < 0 ||
-        nextIndex >= line.stations.length
+        nextIndex >=
+        line.stations.length
     ) {
 
         return null;
@@ -639,34 +1303,46 @@ function getTrainPosition(train) {
         line.stations[nextIndex];
 
 
-    const t = train.progress;
-
-
     return {
 
         x:
             a.x +
-            (b.x - a.x) * t,
+            (
+                b.x - a.x
+            ) *
+            train.progress,
 
         y:
             a.y +
-            (b.y - a.y) * t
+            (
+                b.y - a.y
+            ) *
+            train.progress
 
     };
 
 }
 
 
-/* ================================
+/* =========================================================
    DRAW LINE
-================================ */
+========================================================= */
 
-function drawLine(line) {
+function drawLine(
+    line
+) {
 
-    if (line.stations.length < 2) return;
+    if (
+        line.stations.length < 2
+    ) {
+
+        return;
+
+    }
 
 
     ctx.beginPath();
+
 
     ctx.moveTo(
         line.stations[0].x,
@@ -688,24 +1364,42 @@ function drawLine(line) {
     }
 
 
-    ctx.strokeStyle = line.color;
+    /*
+       Close loop.
+    */
+
+    if (line.loop) {
+
+        ctx.lineTo(
+            line.stations[0].x,
+            line.stations[0].y
+        );
+
+    }
+
+
+    ctx.strokeStyle =
+        line.color;
 
     ctx.lineWidth = 8;
 
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
+    ctx.lineCap =
+        "round";
+
+    ctx.lineJoin =
+        "round";
 
     ctx.stroke();
+
 }
 
 
-/* ================================
-   DRAW STATION SHAPE
-================================ */
+/* =========================================================
+   DRAW STATION
+========================================================= */
 
-function drawShape(
-    station,
-    size = 12
+function drawStation(
+    station
 ) {
 
     ctx.save();
@@ -716,21 +1410,55 @@ function drawShape(
     );
 
 
-    ctx.fillStyle = "#f8f7f1";
+    /*
+       Pulse
+    */
 
-    ctx.strokeStyle = "#282725";
-
-    ctx.lineWidth = 3;
-
-
-    if (station.shape === "circle") {
+    if (
+        station.pulse > 0
+    ) {
 
         ctx.beginPath();
 
         ctx.arc(
             0,
             0,
-            size,
+            19 +
+            station.pulse * 15,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.strokeStyle =
+            `rgba(37,37,37,${station.pulse * 0.15})`;
+
+        ctx.lineWidth = 2;
+
+        ctx.stroke();
+
+    }
+
+
+    ctx.fillStyle =
+        "#f8f7f1";
+
+    ctx.strokeStyle =
+        "#282725";
+
+    ctx.lineWidth = 3;
+
+
+    if (
+        station.shape ===
+        "circle"
+    ) {
+
+        ctx.beginPath();
+
+        ctx.arc(
+            0,
+            0,
+            12,
             0,
             Math.PI * 2
         );
@@ -742,16 +1470,17 @@ function drawShape(
 
 
     else if (
-        station.shape === "square"
+        station.shape ===
+        "square"
     ) {
 
         ctx.beginPath();
 
         ctx.rect(
-            -size,
-            -size,
-            size * 2,
-            size * 2
+            -12,
+            -12,
+            24,
+            24
         );
 
         ctx.fill();
@@ -760,25 +1489,23 @@ function drawShape(
     }
 
 
-    else if (
-        station.shape === "triangle"
-    ) {
+    else {
 
         ctx.beginPath();
 
         ctx.moveTo(
             0,
-            -size
+            -13
         );
 
         ctx.lineTo(
-            size,
-            size
+            13,
+            11
         );
 
         ctx.lineTo(
-            -size,
-            size
+            -13,
+            11
         );
 
         ctx.closePath();
@@ -790,156 +1517,255 @@ function drawShape(
 
 
     ctx.restore();
-}
 
 
-/* ================================
-   DRAW PASSENGERS
-================================ */
+    /*
+       Waiting passenger icons
+    */
 
-function drawPassengers(station) {
-
-    const count =
+    const visible =
         Math.min(
             station.passengers.length,
             8
         );
 
 
-    for (let i = 0; i < count; i++) {
+    for (
+        let i = 0;
+        i < visible;
+        i++
+    ) {
 
         const angle =
-            (Math.PI * 2 / count) * i;
+            (
+                Math.PI * 2 /
+                visible
+            ) * i;
 
-        const radius = 22;
+        const radius = 25;
 
-        const x =
+
+        drawPassengerIcon(
+            ctx,
+            station.passengers[i]
+                .destination
+                .shape,
             station.x +
-            Math.cos(angle) * radius;
-
-        const y =
+                Math.cos(angle) *
+                radius,
             station.y +
-            Math.sin(angle) * radius;
-
-
-        ctx.beginPath();
-
-        ctx.arc(
-            x,
-            y,
-            4,
-            0,
-            Math.PI * 2
+                Math.sin(angle) *
+                radius,
+            4
         );
-
-        ctx.fillStyle =
-            "#57534e";
-
-        ctx.fill();
 
     }
 
 }
 
 
-/* ================================
-   DRAW TRAINS
-================================ */
+/* =========================================================
+   DRAW TRAIN
+========================================================= */
 
-function drawTrains() {
+function drawTrain(
+    train
+) {
 
-    trains.forEach(train => {
-
-        const position =
-            getTrainPosition(train);
-
-        if (!position) return;
+    const position =
+        getTrainPosition(train);
 
 
-        ctx.save();
+    if (!position) {
 
-        ctx.translate(
-            position.x,
-            position.y
-        );
+        return;
+
+    }
+
+
+    ctx.save();
+
+
+    ctx.translate(
+        position.x,
+        position.y
+    );
+
+
+    /*
+       Determine approximate angle
+       so the train follows the line.
+    */
+
+    const line =
+        train.line;
+
+
+    let nextIndex;
+
+
+    if (line.loop) {
+
+        nextIndex =
+            (
+                train.index + 1
+            ) %
+            line.stations.length;
+
+    } else {
+
+        nextIndex =
+            train.reverse
+                ? train.index - 1
+                : train.index + 1;
+
+    }
+
+
+    if (
+        nextIndex >= 0 &&
+        nextIndex <
+        line.stations.length
+    ) {
+
+        const next =
+            line.stations[
+                nextIndex
+            ];
+
+        const current =
+            line.stations[
+                train.index
+            ];
+
+        const angle =
+            Math.atan2(
+                next.y - current.y,
+                next.x - current.x
+            );
+
+        ctx.rotate(angle);
+
+    }
+
+
+    /*
+       Shadow
+    */
+
+    ctx.fillStyle =
+        "rgba(0,0,0,0.14)";
+
+    ctx.beginPath();
+
+    ctx.roundRect(
+        -13,
+        -7,
+        28,
+        16,
+        4
+    );
+
+    ctx.fill();
+
+
+    /*
+       TRAIN BODY
+
+       Rectangular instead of
+       circular.
+    */
+
+    ctx.fillStyle =
+        train.line.color;
+
+    ctx.beginPath();
+
+    ctx.roundRect(
+        -14,
+        -8,
+        28,
+        16,
+        4
+    );
+
+    ctx.fill();
+
+
+    /*
+       Windows
+    */
+
+    const passengerCount =
+        train.passengers.length;
+
+
+    /*
+       Passenger icons are tiny and
+       displayed inside the train.
+    */
+
+    for (
+        let i = 0;
+        i < passengerCount;
+        i++
+    ) {
+
+        const passenger =
+            train.passengers[i];
 
 
         /*
-           Small shadow
+           6 seats arranged as
+           3 × 2.
         */
 
-        ctx.beginPath();
+        const column =
+            i % 3;
 
-        ctx.arc(
-            2,
-            3,
-            10,
-            0,
-            Math.PI * 2
+        const row =
+            Math.floor(i / 3);
+
+
+        const x =
+            -8 +
+            column * 8;
+
+        const y =
+            row === 0
+                ? -3.5
+                : 3.5;
+
+
+        drawPassengerIcon(
+            ctx,
+            passenger.destination.shape,
+            x,
+            y,
+            2.1
         );
 
-        ctx.fillStyle =
-            "rgba(0,0,0,0.15)";
-
-        ctx.fill();
+    }
 
 
-        /*
-           Train body
-        */
-
-        ctx.beginPath();
-
-        ctx.roundRect(
-            -10,
-            -7,
-            20,
-            14,
-            5
-        );
-
-        ctx.fillStyle =
-            train.line.color;
-
-        ctx.fill();
-
-
-        /*
-           Windows
-        */
-
-        ctx.fillStyle =
-            "#f8f7f1";
-
-        ctx.fillRect(
-            -5,
-            -3,
-            4,
-            4
-        );
-
-        ctx.fillRect(
-            2,
-            -3,
-            4,
-            4
-        );
-
-
-        ctx.restore();
-
-    });
+    ctx.restore();
 
 }
 
 
-/* ================================
+/* =========================================================
    DRAW SELECTION
-================================ */
+========================================================= */
 
 function drawSelection() {
 
-    if (!selectedStation) return;
+    if (
+        !selectedStation
+    ) {
+
+        return;
+
+    }
 
 
     ctx.beginPath();
@@ -947,7 +1773,7 @@ function drawSelection() {
     ctx.arc(
         selectedStation.x,
         selectedStation.y,
-        22,
+        23,
         0,
         Math.PI * 2
     );
@@ -969,9 +1795,89 @@ function drawSelection() {
 }
 
 
-/* ================================
+/* =========================================================
+   DRAW DRAG PREVIEW
+========================================================= */
+
+function drawDragPreview() {
+
+    if (
+        !drawingLine ||
+        !selectedStation
+    ) {
+
+        return;
+
+    }
+
+
+    if (
+        !window.pointerX ||
+        !window.pointerY
+    ) {
+
+        return;
+
+    }
+
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        selectedStation.x,
+        selectedStation.y
+    );
+
+    ctx.lineTo(
+        window.pointerX,
+        window.pointerY
+    );
+
+
+    ctx.strokeStyle =
+        "rgba(37,37,37,0.35)";
+
+    ctx.lineWidth = 5;
+
+    ctx.lineCap =
+        "round";
+
+    ctx.setLineDash([
+        8,
+        8
+    ]);
+
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+
+}
+
+
+/* =========================================================
+   POINTER MOVE
+========================================================= */
+
+canvas.addEventListener(
+    "pointermove",
+    event => {
+
+        const p =
+            pointerPosition(event);
+
+        window.pointerX =
+            p.x;
+
+        window.pointerY =
+            p.y;
+
+    }
+);
+
+
+/* =========================================================
    DRAW
-================================ */
+========================================================= */
 
 function draw() {
 
@@ -984,87 +1890,83 @@ function draw() {
 
 
     /*
-       Metro lines
+       Lines
     */
 
-    lines.forEach(drawLine);
+    lines.forEach(
+        drawLine
+    );
 
 
     /*
        Stations
     */
 
-    stations.forEach(station => {
-
-        /*
-           Pulse animation
-        */
-
-        if (station.pulse > 0) {
-
-            ctx.beginPath();
-
-            ctx.arc(
-                station.x,
-                station.y,
-                17 + station.pulse * 15,
-                0,
-                Math.PI * 2
-            );
-
-            ctx.strokeStyle =
-                `rgba(37,37,37,${station.pulse * 0.15})`;
-
-            ctx.lineWidth = 2;
-
-            ctx.stroke();
-
-        }
+    stations.forEach(
+        drawStation
+    );
 
 
-        drawShape(station);
-
-        drawPassengers(station);
-
-    });
-
+    /*
+       Selected station
+    */
 
     drawSelection();
 
-    drawTrains();
+
+    /*
+       Drag preview
+    */
+
+    drawDragPreview();
+
+
+    /*
+       Trains
+    */
+
+    trains.forEach(
+        drawTrain
+    );
 
 }
 
 
-/* ================================
+/* =========================================================
    GAME UPDATE
-================================ */
+========================================================= */
 
-function update(delta) {
+function update(
+    delta
+) {
 
-    if (paused || gameOver) return;
+    if (
+        paused ||
+        gameOver
+    ) {
+
+        return;
+
+    }
 
 
     gameTime += delta;
 
 
     /*
-       Passenger spawning
+       Spawn passengers.
 
-       Starts slow and gradually
-       becomes faster.
+       We keep this fairly slow while
+       the prototype is being tested.
     */
 
     const spawnInterval =
-        Math.max(
-            1600,
-            4000 - week * 180
-        );
+        4000;
 
 
     if (
         gameTime %
-        spawnInterval <
+            spawnInterval <
         delta
     ) {
 
@@ -1074,92 +1976,65 @@ function update(delta) {
 
 
     /*
-       New station every ~18 seconds.
+       Week counter only.
+
+       We are NOT adding stations yet.
+
+       The starting map remains exactly
+       three stations.
     */
 
-    if (
-        gameTime > 0 &&
-        Math.floor(gameTime / 18000) >
-        stations.length - 7
-    ) {
-
-        createStation();
-
-    }
-
-
-    /*
-       Week progression.
-    */
-
-    const newWeek =
+    week =
         Math.floor(
             gameTime / 30000
         ) + 1;
 
 
-    if (newWeek !== week) {
-
-        week = newWeek;
-
-        /*
-           Occasionally add a station.
-        */
-
-        createStation();
-
-    }
-
-
     /*
-       Station pulses fade.
+       Fade station pulses.
     */
 
-    stations.forEach(station => {
+    stations.forEach(
+        station => {
 
-        station.pulse =
-            Math.max(
-                0,
-                station.pulse -
-                delta * 0.002
-            );
+            station.pulse =
+                Math.max(
+                    0,
+                    station.pulse -
+                    delta * 0.002
+                );
 
-    });
-
-
-    /*
-       Passenger aging.
-    */
-
-    passengers.forEach(passenger => {
-
-        passenger.age += delta;
-
-    });
+        }
+    );
 
 
     /*
        Trains.
     */
 
-    updateTrains(delta);
+    updateTrains(
+        delta
+    );
 
 
     /*
        Overcrowding.
 
-       Prototype threshold:
-       12 passengers at a station.
+       12 waiting passengers causes
+       game over for now.
     */
 
     const overloaded =
         stations.find(
             station =>
-                station.passengers.length >= 12
+                station.passengers
+                    .length >= 12
         );
 
 
-    if (overloaded) {
+    if (
+        overloaded
+    ) {
 
         endGame();
 
@@ -1171,9 +2046,9 @@ function update(delta) {
 }
 
 
-/* ================================
-   UI UPDATE
-================================ */
+/* =========================================================
+   UI
+========================================================= */
 
 function updateUI() {
 
@@ -1183,22 +2058,30 @@ function updateUI() {
     scoreDisplay.textContent =
         score;
 
+
     const waiting =
         stations.reduce(
-            (total, station) =>
+            (
+                total,
+                station
+            ) =>
                 total +
                 station.passengers.length,
             0
         );
 
+
     waitingDisplay.textContent =
         waiting;
+
 
     stationCountDisplay.textContent =
         stations.length;
 
+
     trainCountDisplay.textContent =
         trains.length;
+
 
     lineCountDisplay.textContent =
         lines.length;
@@ -1206,9 +2089,9 @@ function updateUI() {
 }
 
 
-/* ================================
+/* =========================================================
    GAME OVER
-================================ */
+========================================================= */
 
 function endGame() {
 
@@ -1224,17 +2107,26 @@ function endGame() {
 }
 
 
-/* ================================
+/* =========================================================
    PAUSE
-================================ */
+========================================================= */
 
 pauseBtn.addEventListener(
     "click",
     () => {
 
-        if (gameOver) return;
+        if (
+            gameOver
+        ) {
 
-        paused = !paused;
+            return;
+
+        }
+
+
+        paused =
+            !paused;
+
 
         pauseBtn.textContent =
             paused
@@ -1245,9 +2137,9 @@ pauseBtn.addEventListener(
 );
 
 
-/* ================================
+/* =========================================================
    RESTART
-================================ */
+========================================================= */
 
 function restartGame() {
 
@@ -1271,28 +2163,37 @@ playAgain.addEventListener(
 );
 
 
-/* ================================
+/* =========================================================
    GAME LOOP
-================================ */
+========================================================= */
 
-function gameLoop(timestamp) {
+function gameLoop(
+    timestamp
+) {
 
     if (!lastTime) {
-        lastTime = timestamp;
+
+        lastTime =
+            timestamp;
+
     }
 
 
     const delta =
         Math.min(
-            timestamp - lastTime,
+            timestamp -
+                lastTime,
             50
         );
 
 
-    lastTime = timestamp;
+    lastTime =
+        timestamp;
 
 
-    update(delta);
+    update(
+        delta
+    );
 
     draw();
 
@@ -1304,9 +2205,9 @@ function gameLoop(timestamp) {
 }
 
 
-/* ================================
+/* =========================================================
    START
-================================ */
+========================================================= */
 
 resizeCanvas();
 
