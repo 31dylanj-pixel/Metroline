@@ -402,78 +402,40 @@ body {
 
 
 /* =========================================================
-   LINE INFO
+   LINE SELECTOR
    ========================================================= */
 
-.line-info {
+#lineStatus {
     display: flex;
+
     align-items: center;
 
-    gap: 11px;
-}
+    justify-content: flex-start;
 
-.line-color {
-    width: 13px;
-    height: 13px;
+    gap: 8px;
 
-    flex: 0 0 13px;
+    min-height: 16px;
 
-    border-radius: 50%;
-
-    background: var(--red);
-
-    box-shadow:
-        0 0 13px rgba(239, 68, 68, 0.45);
-}
-
-.line-info > div:last-child {
-    display: flex;
-    flex-direction: column;
-
-    gap: 1px;
-}
-
-.line-info strong {
-    font-family: "Montserrat", sans-serif;
-
-    font-size: 11px;
-
-    letter-spacing: 0.08em;
-}
-
-#lineStatus {
     font-size: 9px;
 
     color: var(--muted);
 }
 
-
-/* =========================================================
-   LINE DOTS
-   ========================================================= */
-
-#lineStatus:has(.line-dot) {
-    display: flex;
-    align-items: center;
-
-    gap: 7px;
-}
-
 .line-dot {
-    width: 11px;
-    height: 11px;
+    width: 12px;
+    height: 12px;
 
-    display: inline-block;
+    display: block;
 
-    flex: 0 0 11px;
+    flex: 0 0 12px;
 
     border-radius: 50%;
 
     background: var(--line-color);
 
-    cursor: pointer;
+    border: 2px solid transparent;
 
-    opacity: 1;
+    cursor: pointer;
 
     transition:
         transform 0.18s ease,
@@ -497,21 +459,70 @@ body {
 
 .line-dot.used {
     box-shadow:
-        0 0 0 2px rgba(255, 255, 255, 0.07);
+        0 0 0 2px rgba(255, 255, 255, 0.08);
 }
 
 .line-dot.selected {
-    transform: scale(1.3);
+    transform: scale(1.18);
+
+    border-color: rgba(255, 255, 255, 0.9);
 
     box-shadow:
-        0 0 0 2px rgba(255, 255, 255, 0.85),
-        0 0 12px var(--line-color);
+        0 0 0 2px rgba(255, 255, 255, 0.08),
+        0 0 10px var(--line-color);
 }
 
 .line-dot.unlocked:hover {
-    transform: scale(1.18);
+    transform: scale(1.12);
 }
 
+.line-info {
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    min-width: 210px;
+}
+
+.line-color {
+    width: 13px;
+    height: 13px;
+
+    flex: 0 0 13px;
+
+    border-radius: 50%;
+
+    background: var(--red);
+
+    box-shadow:
+        0 0 13px rgba(239, 68, 68, 0.45);
+}
+
+.line-info > div:last-child {
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: center;
+
+    gap: 2px;
+}
+
+.line-info strong {
+    font-family: "Montserrat", sans-serif;
+
+    font-size: 10px;
+
+    line-height: 1;
+
+    letter-spacing: 0.08em;
+}
+
+#lineStatus {
+    min-height: 14px;
+}
 
 /* =========================================================
    NETWORK INFO
@@ -776,6 +787,262 @@ body {
     }
 }
 
+/* =========================================================
+   WEEKLY UPGRADE
+   ========================================================= */
+
+#weeklyChoice {
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 9999;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+
+    background:
+        rgba(5, 8, 12, 0.68);
+
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+
+    animation:
+        weeklyOverlayIn 0.25s ease;
+}
+
+@keyframes weeklyOverlayIn {
+
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+
+.weekly-choice-card {
+    width: min(570px, calc(100vw - 40px));
+
+    padding: 32px;
+
+    border-radius: 24px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(30, 38, 48, 0.98),
+            rgba(13, 18, 24, 0.98)
+        );
+
+    border: 1px solid rgba(255, 255, 255, 0.13);
+
+    box-shadow:
+        0 35px 100px rgba(0, 0, 0, 0.55);
+
+    text-align: center;
+
+    animation:
+        weeklyCardIn 0.3s ease;
+}
+
+@keyframes weeklyCardIn {
+
+    from {
+        opacity: 0;
+        transform: translateY(15px) scale(0.97);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+
+.weekly-choice-kicker {
+    margin-bottom: 7px;
+
+    font-size: 9px;
+
+    font-weight: 700;
+
+    letter-spacing: 0.18em;
+
+    text-transform: uppercase;
+
+    color: #8c97a3;
+}
+
+
+.weekly-choice-card h2 {
+    margin: 0;
+
+    font-family: "Montserrat", sans-serif;
+
+    font-size: 27px;
+
+    line-height: 1.15;
+
+    color: #ffffff;
+}
+
+
+.weekly-choice-description {
+    max-width: 420px;
+
+    margin: 11px auto 25px;
+
+    font-size: 11px;
+
+    line-height: 1.6;
+
+    color: #929da8;
+}
+
+
+.weekly-choice-options {
+    display: grid;
+
+    grid-template-columns: repeat(2, 1fr);
+
+    gap: 12px;
+}
+
+
+.weekly-choice-option {
+    min-height: 100px;
+
+    width: 100%;
+
+    padding: 16px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 13px;
+
+    text-align: left;
+
+    border: 1px solid rgba(255, 255, 255, 0.09);
+
+    border-radius: 16px;
+
+    background:
+        rgba(255, 255, 255, 0.045);
+
+    color: #ffffff;
+
+    cursor: pointer;
+
+    transition:
+        background 0.18s ease,
+        border-color 0.18s ease,
+        transform 0.18s ease;
+}
+
+.weekly-choice-option:hover {
+    background:
+        rgba(255, 255, 255, 0.075);
+
+    border-color:
+        rgba(255, 255, 255, 0.18);
+
+    transform: translateY(-2px);
+}
+
+.weekly-choice-option:active {
+    transform: translateY(0);
+}
+
+
+.choice-icon {
+    width: 36px;
+    height: 36px;
+
+    flex: 0 0 36px;
+
+    border-radius: 50%;
+
+    background: var(--choice-color);
+
+    box-shadow:
+        0 0 16px var(--choice-color);
+}
+
+
+.choice-train-icon {
+    width: 36px;
+    height: 36px;
+
+    flex: 0 0 36px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    background:
+        rgba(255, 255, 255, 0.08);
+
+    font-size: 18px;
+}
+
+
+.weekly-choice-option span:last-child {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 3px;
+}
+
+
+.weekly-choice-option strong {
+    font-size: 11px;
+
+    font-weight: 700;
+
+    color: #f5f7fa;
+}
+
+
+.weekly-choice-option small {
+    font-size: 9px;
+
+    line-height: 1.4;
+
+    color: #89949f;
+}
+
+
+/* =========================================================
+   WEEKLY UPGRADE — MOBILE
+   ========================================================= */
+
+@media (max-width: 600px) {
+
+    .weekly-choice-options {
+        grid-template-columns: 1fr;
+    }
+
+    .weekly-choice-card {
+        padding: 26px 20px;
+    }
+
+    .weekly-choice-card h2 {
+        font-size: 23px;
+    }
+}
 
 @media (max-width: 600px) {
 
