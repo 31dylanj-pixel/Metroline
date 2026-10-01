@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+
     <meta
         name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
@@ -14,135 +15,151 @@
 
 <body>
 
-    <div id="game">
+<div id="game">
 
-        <!-- TOP BAR -->
-        <header class="topbar">
+    <header class="topbar">
 
-            <div class="brand">
-                <span class="brand-dot"></span>
-                <div>
-                    <h1>METROLINE</h1>
-                    <p>Urban Transit Prototype</p>
-                </div>
+        <div class="brand">
+            <span class="brand-dot"></span>
+
+            <div>
+                <h1>METROLINE</h1>
+                <p>Urban Transit Prototype</p>
+            </div>
+        </div>
+
+
+        <div class="stats">
+
+            <div class="stat">
+                <span>WEEK</span>
+                <strong id="week">1</strong>
             </div>
 
-            <div class="stats">
-
-                <div class="stat">
-                    <span>WEEK</span>
-                    <strong id="week">1</strong>
-                </div>
-
-                <div class="stat">
-                    <span>PASSENGERS</span>
-                    <strong id="score">0</strong>
-                </div>
-
-                <div class="stat">
-                    <span>WAITING</span>
-                    <strong id="waiting">0</strong>
-                </div>
-
+            <div class="stat">
+                <span>PASSENGERS</span>
+                <strong id="score">0</strong>
             </div>
 
-            <div class="controls">
-
-                <button id="pauseBtn">
-                    Pause
-                </button>
-
-                <button id="restartBtn">
-                    Restart
-                </button>
-
+            <div class="stat">
+                <span>WAITING</span>
+                <strong id="waiting">0</strong>
             </div>
 
-        </header>
+        </div>
 
 
-        <!-- GAME AREA -->
-        <main id="gameArea">
+        <div class="controls">
 
-            <canvas id="canvas"></canvas>
+            <button id="pauseBtn">
+                Pause
+            </button>
 
-            <div id="instructions">
-                <strong>Build your metro</strong>
-                <span>
-                    Click one station, then another to connect them.
-                </span>
-            </div>
-
-        </main>
-
-
-        <!-- BOTTOM PANEL -->
-        <footer class="bottom-panel">
-
-            <div class="line-info">
-
-                <div class="line-color"></div>
-
-                <div>
-                    <strong>LINE 1</strong>
-                    <span id="lineStatus">
-                        Click a station to begin
-                    </span>
-                </div>
-
-            </div>
-
-            <div class="network-info">
-
-                <span>
-                    Stations:
-                    <strong id="stationCount">0</strong>
-                </span>
-
-                <span>
-                    Trains:
-                    <strong id="trainCount">1</strong>
-                </span>
-
-                <span>
-                    Lines:
-                    <strong id="lineCount">1</strong>
-                </span>
-
-            </div>
-
-        </footer>
-
-    </div>
-
-
-    <div id="gameOver" class="overlay hidden">
-
-        <div class="gameover-card">
-
-            <p class="eyebrow">NETWORK FAILURE</p>
-
-            <h2>Metro Overloaded</h2>
-
-            <p>
-                Too many passengers were waiting at one of your stations.
-            </p>
-
-            <div class="final-score">
-                <span>Passengers transported</span>
-                <strong id="finalScore">0</strong>
-            </div>
-
-            <button id="playAgain">
-                Build Another Network
+            <button id="restartBtn">
+                Restart
             </button>
 
         </div>
 
+    </header>
+
+
+    <main id="gameArea">
+
+        <canvas id="canvas"></canvas>
+
+        <div id="instructions">
+
+            <strong>Build your metro</strong>
+
+            <span>
+                Drag between stations to build a line
+            </span>
+
+        </div>
+
+    </main>
+
+
+    <footer class="bottom-panel">
+
+        <div class="line-info">
+
+            <div class="line-color"></div>
+
+            <div>
+                <strong>LINE 1</strong>
+
+                <span id="lineStatus">
+                    Drag from a station
+                </span>
+            </div>
+
+        </div>
+
+
+        <div class="network-info">
+
+            <span>
+                Stations:
+                <strong id="stationCount">3</strong>
+            </span>
+
+            <span>
+                Trains:
+                <strong id="trainCount">1</strong>
+            </span>
+
+            <span>
+                Lines:
+                <strong id="lineCount">1</strong>
+            </span>
+
+        </div>
+
+    </footer>
+
+</div>
+
+
+<div id="gameOver" class="overlay hidden">
+
+    <div class="gameover-card">
+
+        <p class="eyebrow">
+            NETWORK FAILURE
+        </p>
+
+        <h2>
+            Metro Overloaded
+        </h2>
+
+        <p>
+            Too many passengers were waiting at one of your stations.
+        </p>
+
+        <div class="final-score">
+
+            <span>
+                Passengers transported
+            </span>
+
+            <strong id="finalScore">
+                0
+            </strong>
+
+        </div>
+
+        <button id="playAgain">
+            Build Another Network
+        </button>
+
     </div>
 
+</div>
 
-    <script src="game.js"></script>
+
+<script src="game.js"></script>
 
 </body>
 </html>
