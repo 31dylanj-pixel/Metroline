@@ -39,18 +39,77 @@ const COLORS = {
 */
 
 const LINE_COLORS = [
-    "#3b82f6",
-    "#ef4444",
-    "#8b5cf6",
-    "#10b981",
-    "#f59e0b",
-    "#ec4899",
-    "#06b6d4",
-    "#f97316"
+    "#ef4444", // Red
+    "#3b82f6", // Blue
+    "#14b8a6", // Teal
+    "#f97316", // Orange
+    "#22c55e", // Green
+    "#eab308"  // Yellow
 ];
 
-let nextLineColorIndex = 0;
+const LINE_COLOR_NAMES = [
+    "Red",
+    "Blue",
+    "Teal",
+    "Orange",
+    "Green",
+    "Yellow"
+];
 
+let unlockedLineCount = 1;
+let selectedLineColorIndex = 0;
+
+function updateLineStatus() {
+    if (!lineStatusEl) return;
+
+    let html = "";
+
+    for (let i = 0; i < LINE_COLORS.length; i++) {
+        const unlocked = i < unlockedLineCount;
+
+        const used = lines.some(
+            line => line.colorIndex === i
+        );
+
+        const selected = selectedLineColorIndex === i;
+
+        html += `
+            <span
+                class="
+                    line-dot
+                    ${unlocked ? "unlocked" : "locked"}
+                    ${used ? "used" : ""}
+                    ${selected ? "selected" : ""}
+                "
+                style="--line-color:${LINE_COLORS[i]}"
+                title="${LINE_COLOR_NAMES[i]}"
+                data-line-index="${i}"
+            ></span>
+        `;
+    }
+
+    lineStatusEl.innerHTML = html;
+
+    const dots = lineStatusEl.querySelectorAll(".line-dot");
+
+    dots.forEach(dot => {
+        dot.addEventListener("click", () => {
+            const index = Number(dot.dataset.lineIndex);
+
+            if (index >= unlockedLineCount) {
+                return;
+            }
+
+            selectedLineColorIndex = index;
+
+            updateLineStatus();
+        });
+    });
+}
+
+function getLineColorName(index) {
+    return LINE_COLOR_NAMES[index] || "Unknown";
+}
 
 /* =========================================================
    GAME STATE
@@ -63,6 +122,10 @@ let trains = [];
 
 let score = 0;
 let week = 1;
+
+let weeklyChoiceOpen = false;
+
+const MAX_LINE_UNLOCKS = LINE_COLORS.length;
 
 let paused = false;
 let gameOver = false;
@@ -150,6 +213,7 @@ function initGame() {
 
     paused = false;
     gameOver = false;
+    weeklyChoiceOpen = false;
 
     weekTimer = 0;
     passengerTimer = 0;
@@ -158,7 +222,8 @@ function initGame() {
     nextStationSpawn =
         randomStationSpawnTime();
 
-    nextLineColorIndex = 0;
+    unlockedLineCount = 1;
+    selectedLineColorIndex = 0;
 
     draggingRail = false;
     railStartStation = null;
@@ -202,39 +267,7 @@ function initGame() {
 
     /* One train in depot */
 
-    trains.push({
-        id: 1,
-
-        placed: false,
-        inDepot: true,
-
-        x: 65,
-        y: 70,
-
-        /*
-            THIS is the actual line the train
-            belongs to.
-
-            It never gets randomly changed.
-        */
-        line: null,
-
-        /*
-            Segment-based movement.
-        */
-        segmentIndex: 0,
-        progress: 0,
-        direction: 1,
-
-        passengers: [],
-
-        boarding: false,
-        boardingTimer: 0,
-        boardingStation: null,
-
-        angle: 0
-    });
-
+    trains.push(createDepotTrain());
 
     updateStats();
     updateWeekProgress();
@@ -314,7 +347,23 @@ function updateWeekProgress() {
     }
 }
 
+function addWeeklyTrain() {
+    const train = createDepotTrain();
 
+    trains.push(train);
+
+    updateStats();
+    draw();
+}
+
+function addAdditionalTrain() {
+    const train = createDepotTrain();
+
+    trains.push(train);
+
+    updateStats();
+    draw();
+}
 /* =========================================================
    RANDOM STATION TIMER
 ========================================================= */
@@ -518,30 +567,20 @@ function spawnPassenger() {
 ========================================================= */
 
 function update(dt) {
-
-    if (
-        paused ||
-        gameOver
-    ) {
-        return;
+    if (paused || gameOver || weeklyChoiceOpen) {
+       return;
     }
-
 
     /* WEEK */
 
     weekTimer += dt;
 
-    if (
-        weekTimer >=
-        WEEK_DURATION
-    ) {
-
-        weekTimer -=
-            WEEK_DURATION;
-
-        week++;
-
-        updateStats();
+    if (weekTimer >= WEEK_DURATION) {
+       weekTimer = 0;
+   
+       finishWeek();
+   
+       return;
     }
 
 
@@ -609,7 +648,16 @@ function update(dt) {
     updateStats();
 }
 
+function finishWeek() {
+    // Automatic weekly reward
+    addWeeklyTrain();
 
+    // Pause the game and ask the player what they want
+    openWeeklyChoice();
+
+    updateStats();
+    draw();
+}
 /* =========================================================
    TRAIN UPDATE
 ========================================================= */
@@ -636,19 +684,21 @@ function updateTrains(dt) {
 
         if (train.boarding) {
 
-            train.boardingTimer -= dt;
-
-            if (
-                train.boardingTimer <= 0
-            ) {
-
-                boardNextPassenger(
-                    train
-                );
-            }
-
-            continue;
-        }
+             train.boardingTimer -= dt;
+         
+             if (train.boardingTimer > 0) {
+                 continue;
+             }
+         
+             boardNextPassenger(train);
+         
+             if (train.boarding) {
+                 continue;
+             }
+         
+             // Boarding finished.
+             // Continue moving this same frame.
+         }
 
 
         const line =
@@ -790,7 +840,31 @@ function updateTrains(dt) {
     }
 }
 
+function createDepotTrain() {
+    return {
+        id: Date.now() + Math.random(),
 
+        placed: false,
+        inDepot: true,
+
+        x: 65,
+        y: 70,
+
+        line: null,
+
+        segmentIndex: 0,
+        progress: 0,
+        direction: 1,
+
+        passengers: [],
+
+        boarding: false,
+        boardingTimer: 0,
+        boardingStation: null,
+
+        angle: 0
+    };
+}
 /* =========================================================
    GET TRAIN SEGMENT
 ========================================================= */
@@ -1206,37 +1280,43 @@ function boardNextPassenger(
    CREATE LINE
 ========================================================= */
 
-function createLine(
-    firstStation,
-    secondStation
-) {
+function createLine(firstStation, secondStation) {
+    if (unlockedLineCount <= 0) {
+        return;
+    }
 
-    /*
-        IMPORTANT:
+    const availableColors = [];
 
-        We create the color HERE.
+    for (let i = 0; i < unlockedLineCount; i++) {
+        const alreadyUsed = lines.some(
+            line => line.colorIndex === i
+        );
 
-        After this point, the line carries
-        its own permanent color.
-    */
+        if (!alreadyUsed) {
+            availableColors.push(i);
+        }
+    }
 
-    const color =
-        LINE_COLORS[
-            nextLineColorIndex %
-            LINE_COLORS.length
-        ];
+    if (availableColors.length === 0) {
+        updateLineStatus();
+        return;
+    }
 
+    let colorIndex = selectedLineColorIndex;
 
-    nextLineColorIndex++;
-
+    if (
+        colorIndex >= unlockedLineCount ||
+        lines.some(line => line.colorIndex === colorIndex)
+    ) {
+        colorIndex = availableColors[0];
+    }
 
     const line = {
+        id: Date.now() + Math.random(),
 
-        id:
-            Date.now() +
-            Math.random(),
+        color: LINE_COLORS[colorIndex],
 
-        color,
+        colorIndex: colorIndex,
 
         stations: [
             firstStation,
@@ -1244,16 +1324,156 @@ function createLine(
         ]
     };
 
+    lines.push(line);
 
-    lines.push(
-        line
-    );
+    selectedLineColorIndex = colorIndex;
 
+    updateStats();
+    updateLineStatus();
+    draw();
+}
+
+
+function openWeeklyChoice() {
+    weeklyChoiceOpen = true;
+
+    const overlay = document.createElement("div");
+
+    overlay.id = "weeklyChoice";
+
+    const nextColorIndex = unlockedLineCount;
+    const hasLineAvailable =
+        nextColorIndex < MAX_LINE_UNLOCKS;
+
+    const nextColor =
+        LINE_COLORS[nextColorIndex];
+
+    const nextColorName =
+        getLineColorName(nextColorIndex);
+
+    overlay.innerHTML = `
+        <div class="weekly-choice-card">
+
+            <div class="weekly-choice-kicker">
+                WEEK ${week} COMPLETE
+            </div>
+
+            <h2>Network Expansion</h2>
+
+            <p class="weekly-choice-description">
+                Your weekly train has been added.
+                Choose your next upgrade.
+            </p>
+
+            <div class="weekly-choice-options">
+
+                ${
+                    hasLineAvailable
+                    ? `
+                        <button
+                            class="weekly-choice-option"
+                            id="unlockLineChoice"
+                        >
+                            <span
+                                class="choice-icon"
+                                style="--choice-color:${nextColor};"
+                            ></span>
+
+                            <span>
+                                <strong>
+                                    Unlock New Line
+                                </strong>
+
+                                <small>
+                                    ${nextColorName} line
+                                </small>
+                            </span>
+                        </button>
+                    `
+                    : ""
+                }
+
+                <button
+                    class="weekly-choice-option"
+                    id="additionalTrainChoice"
+                >
+                    <span class="choice-train-icon">
+                        🚆
+                    </span>
+
+                    <span>
+                        <strong>
+                            Additional Train
+                        </strong>
+
+                        <small>
+                            Add another train to your fleet
+                        </small>
+                    </span>
+                </button>
+
+            </div>
+
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const lineButton =
+        document.getElementById("unlockLineChoice");
+
+    if (lineButton) {
+        lineButton.addEventListener("click", () => {
+            unlockNextLine();
+            completeWeeklyChoice();
+        });
+    }
+
+    const trainButton =
+        document.getElementById("additionalTrainChoice");
+
+    trainButton.addEventListener("click", () => {
+        addAdditionalTrain();
+        completeWeeklyChoice();
+    });
+}
+
+function completeWeeklyChoice() {
+    week++;
+
+    closeWeeklyChoice();
 
     updateStats();
     draw();
 }
 
+function closeWeeklyChoice() {
+    const overlay =
+        document.getElementById("weeklyChoice");
+
+    if (overlay) {
+        overlay.remove();
+    }
+
+    weeklyChoiceOpen = false;
+
+    draw();
+}
+
+function unlockNextLine() {
+    if (unlockedLineCount >= MAX_LINE_UNLOCKS) {
+        return;
+    }
+
+    unlockedLineCount++;
+
+    selectedLineColorIndex =
+        unlockedLineCount - 1;
+
+    updateLineStatus();
+    updateStats();
+    draw();
+}
 
 /* =========================================================
    EXTEND LINE
@@ -1508,6 +1728,35 @@ function connectStations(
     );
 }
 
+function findLineForTrainAtStation(station) {
+    const matchingLines = lines.filter(line =>
+        line.stations.includes(station)
+    );
+
+    if (matchingLines.length === 0) {
+        return null;
+    }
+
+    // If the currently selected line uses this station,
+    // use that line.
+    const selectedLine = matchingLines.find(
+        line =>
+            line.colorIndex === selectedLineColorIndex
+    );
+
+    if (selectedLine) {
+        return selectedLine;
+    }
+
+    // If there is only one possible line,
+    // use it.
+    if (matchingLines.length === 1) {
+        return matchingLines[0];
+    }
+
+    // Otherwise use the first matching line.
+    return matchingLines[0];
+}
 
 /* =========================================================
    PLACE TRAIN
@@ -1532,10 +1781,8 @@ function placeTrain(
 
     if (station) {
 
-        const line =
-            findLineContainingStation(
-                station
-            );
+        const line = findLineForTrainAtStation(station);
+        train.line = line;
 
 
         train.placed = true;
@@ -1552,9 +1799,6 @@ function placeTrain(
             ONLY attach to the line that
             actually contains this station.
         */
-
-        train.line =
-            line || null;
 
 
         train.boarding = false;
@@ -1665,34 +1909,6 @@ function placeTrain(
     updateStats();
     draw();
 }
-
-
-/* =========================================================
-   FIND LINE AT STATION
-========================================================= */
-
-function findLineContainingStation(
-    station
-) {
-
-    for (
-        const line of lines
-    ) {
-
-        if (
-            line.stations.includes(
-                station
-            )
-        ) {
-
-            return line;
-        }
-    }
-
-
-    return null;
-}
-
 
 /* =========================================================
    SET TRAIN AT STATION
@@ -2420,10 +2636,13 @@ function removeRailAt(
                             id:
                                 Date.now() +
                                 Math.random(),
-
+                        
                             color:
                                 line.color,
-
+                        
+                            colorIndex:
+                                line.colorIndex,
+                        
                             stations:
                                 leftStations
                         });
@@ -2439,10 +2658,13 @@ function removeRailAt(
                             id:
                                 Date.now() +
                                 Math.random(),
-
+                        
                             color:
                                 line.color,
-
+                        
+                            colorIndex:
+                                line.colorIndex,
+                        
                             stations:
                                 rightStations
                         });
@@ -3498,74 +3720,32 @@ function drawDepot() {
 ========================================================= */
 
 function updateStats() {
-
     if (weekEl) {
-
-        weekEl.textContent =
-            `Week ${week}`;
+        weekEl.textContent = week;
     }
-
 
     if (scoreEl) {
-
-        scoreEl.textContent =
-            score;
+        scoreEl.textContent = score;
     }
-
-
-    const waiting =
-        stations.reduce(
-            (sum, station) =>
-                sum +
-                station.waiting.length,
-            0
-        );
-
 
     if (waitingEl) {
-
-        waitingEl.textContent =
-            waiting;
+        waitingEl.textContent = passengers.length;
     }
-
 
     if (stationCountEl) {
-
-        stationCountEl.textContent =
-            stations.length;
+        stationCountEl.textContent = stations.length;
     }
-
 
     if (trainCountEl) {
-
-        trainCountEl.textContent =
-            trains.filter(
-                train =>
-                    train.placed
-            ).length;
+        trainCountEl.textContent = trains.length;
     }
-
 
     if (lineCountEl) {
-
-        lineCountEl.textContent =
-            lines.length;
+        lineCountEl.textContent = lines.length;
     }
 
-
-    if (lineStatusEl) {
-
-        lineStatusEl.textContent =
-            lines.length === 0
-                ? "No lines"
-                : `${lines.length} line${
-                    lines.length === 1
-                        ? ""
-                        : "s"
-                } active`;
-    }
+    updateLineStatus();
 }
-
 
 /* =========================================================
    GAME OVER
