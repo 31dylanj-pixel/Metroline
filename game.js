@@ -586,6 +586,9 @@ function update(dt) {
 
     updateWeekProgress();
 
+    updatePassengers(dt);
+    updateTrains(dt);
+
 
     /* STATION SPAWN */
 
@@ -951,6 +954,67 @@ function updateTrainPosition(train) {
     );
 }
 
+function resetTrainsOnInvalidLines() {
+    trains.forEach(train => {
+
+         if (!train.placed || !train.line) {
+              return;
+          }
+      
+          const lineExists = lines.some(
+              line => line.id === train.line.id
+          );
+      
+          if (!lineExists) {
+              train.placed = false;
+              train.inDepot = true;
+      
+              train.x = 65;
+              train.y = 70;
+      
+              train.line = null;
+      
+              train.segmentIndex = 0;
+              train.progress = 0;
+              train.direction = 1;
+      
+              train.passengers = [];
+      
+              train.boarding = false;
+              train.boardingTimer = 0;
+              train.boardingStation = null;
+      
+              return;
+          }
+
+        const currentLine = lines.find(
+            line => line.id === train.line.id
+        );
+
+        if (!currentLine) {
+
+            train.placed = false;
+            train.inDepot = true;
+
+            train.x = 65;
+            train.y = 70;
+
+            train.line = null;
+
+            train.segmentIndex = 0;
+            train.progress = 0;
+            train.direction = 1;
+
+            train.passengers = [];
+
+            train.boarding = false;
+            train.boardingTimer = 0;
+            train.boardingStation = null;
+
+            train.angle = 0;
+        }
+    });
+}
 
 /* =========================================================
    TRAIN ANGLE
@@ -1443,7 +1507,10 @@ function completeWeeklyChoice() {
 
     closeWeeklyChoice();
 
+    weeklyChoiceOpen = false;
+
     updateStats();
+    updateWeekProgress();
     draw();
 }
 
@@ -1456,8 +1523,6 @@ function closeWeeklyChoice() {
     }
 
     weeklyChoiceOpen = false;
-
-    draw();
 }
 
 function unlockNextLine() {
@@ -2689,7 +2754,7 @@ function removeRailAt(
                         }
                     }
                 }
-
+                resetTrainsOnInvalidLines();
 
                 updateStats();
                 draw();
