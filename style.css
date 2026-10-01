@@ -219,6 +219,15 @@ button {
     touch-action: none;
 }
 
+/* =========================================================
+   AVAILABLE TRAIN DEPOT
+   ========================================================= */
+
+.available-train,
+#trainDepot {
+    min-width: 220px;
+    min-height: 105px;
+}
 
 /* ================================
    INSTRUCTIONS
