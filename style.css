@@ -1,583 +1,828 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+/* =========================================================
+   MINI METRO STYLE GAME
+   COMPLETE CSS
+   ========================================================= */
 
 
-/* ================================
-   RESET
-================================ */
+/* =========================================================
+   ROOT
+   ========================================================= */
+
+:root {
+    --background: #0b1016;
+    --background-2: #111821;
+
+    --panel: rgba(255, 255, 255, 0.055);
+    --panel-strong: rgba(255, 255, 255, 0.085);
+
+    --border: rgba(255, 255, 255, 0.09);
+    --border-strong: rgba(255, 255, 255, 0.15);
+
+    --text: #f5f7fa;
+    --muted: #9ca7b3;
+
+    --accent: #e8edf2;
+
+    --shadow:
+        0 20px 60px rgba(0, 0, 0, 0.35);
+
+    --radius: 18px;
+}
+
+
+/* =========================================================
+   GLOBAL
+   ========================================================= */
 
 * {
     box-sizing: border-box;
-    margin: 0;
-    padding: 0;
 }
 
 html,
 body {
+    margin: 0;
+    padding: 0;
     width: 100%;
-    height: 100%;
-    overflow: hidden;
+    min-height: 100%;
+
+    font-family: "Poppins", sans-serif;
+
+    background:
+        radial-gradient(
+            circle at 20% 10%,
+            rgba(70, 90, 110, 0.13),
+            transparent 35%
+        ),
+        radial-gradient(
+            circle at 80% 90%,
+            rgba(30, 50, 70, 0.16),
+            transparent 35%
+        ),
+        linear-gradient(
+            135deg,
+            var(--background),
+            var(--background-2)
+        );
+
+    color: var(--text);
 }
 
 body {
-    font-family: "DM Sans", sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
 
-    background: #e9e6dc;
-
-    color: #252525;
-
-    user-select: none;
+button,
+input {
+    font: inherit;
 }
 
 
-/* ================================
-   GAME
-================================ */
+/* =========================================================
+   GAME WRAPPER
+   ========================================================= */
 
-#game {
+.game {
     width: 100%;
-    height: 100%;
+    min-height: 100vh;
 
     display: flex;
     flex-direction: column;
 }
 
 
-/* ================================
-   TOP BAR
-================================ */
+/* =========================================================
+   TOP HUD
+   ========================================================= */
 
 .topbar {
-    height: 76px;
+    position: relative;
+    z-index: 20;
 
-    flex-shrink: 0;
+    width: 100%;
 
     display: flex;
     align-items: center;
     justify-content: space-between;
 
-    padding: 0 28px;
+    padding: 16px 22px;
 
-    background: rgba(248, 247, 241, 0.96);
+    background: rgba(9, 13, 18, 0.78);
 
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    border-bottom: 1px solid var(--border);
 
-    z-index: 10;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+
+    box-shadow:
+        0 8px 30px rgba(0, 0, 0, 0.16);
 }
 
 
-.brand {
-    display: flex;
-    align-items: center;
-
-    gap: 12px;
-}
-
-
-.brand-dot {
-    width: 12px;
-    height: 12px;
-
-    background: #e85d4a;
-
-    border-radius: 50%;
-}
-
-
-.brand h1 {
-    font-family: "Space Grotesk", sans-serif;
-
-    font-size: 17px;
-
-    letter-spacing: 0.08em;
-}
-
-
-.brand p {
-    margin-top: 2px;
-
-    font-size: 11px;
-
-    color: #88847b;
-}
-
-
-/* ================================
-   STATS
-================================ */
+/* =========================================================
+   HUD SECTIONS
+   ========================================================= */
 
 .stats {
     display: flex;
+    align-items: center;
+    gap: 10px;
 
-    gap: 38px;
+    flex-wrap: wrap;
 }
 
-
 .stat {
+    min-width: 82px;
+
+    padding: 8px 13px;
+
+    border-radius: 12px;
+
+    background: var(--panel);
+
+    border: 1px solid var(--border);
+
     display: flex;
     flex-direction: column;
 
-    gap: 2px;
+    gap: 1px;
 }
 
-
-.stat span {
+.stat-label {
     font-size: 9px;
+
+    text-transform: uppercase;
 
     letter-spacing: 0.12em;
 
-    color: #8b877e;
-}
-
-
-.stat strong {
-    font-family: "Space Grotesk", sans-serif;
-
-    font-size: 17px;
-}
-
-
-/* ================================
-   CONTROLS
-================================ */
-
-.controls {
-    display: flex;
-
-    gap: 8px;
-}
-
-
-button {
-    border: none;
-
-    font-family: "DM Sans", sans-serif;
+    color: var(--muted);
 
     font-weight: 600;
+}
+
+.stat-value {
+    font-size: 17px;
+
+    line-height: 1.2;
+
+    font-weight: 700;
+
+    color: var(--text);
+}
+
+
+/* =========================================================
+   LINE STATUS
+   ========================================================= */
+
+#lineStatus {
+    display: flex;
+    align-items: center;
+
+    gap: 8px;
+
+    padding: 0 4px;
+}
+
+.line-dot {
+    width: 12px;
+    height: 12px;
+
+    flex: 0 0 auto;
+
+    border-radius: 50%;
+
+    background: var(--line-color);
+
+    display: inline-block;
 
     cursor: pointer;
 
+    border: 2px solid transparent;
+
     transition:
-        transform 0.15s ease,
-        background 0.15s ease;
+        transform 0.18s ease,
+        opacity 0.18s ease,
+        box-shadow 0.18s ease,
+        border-color 0.18s ease;
+}
+
+.line-dot.unlocked {
+    opacity: 1;
+}
+
+.line-dot.locked {
+    opacity: 0.18;
+
+    background: #69717a;
+
+    box-shadow: none;
+
+    cursor: default;
+}
+
+.line-dot.used {
+    box-shadow:
+        0 0 0 2px rgba(255, 255, 255, 0.08);
+}
+
+.line-dot.selected {
+    transform: scale(1.28);
+
+    border-color: rgba(255, 255, 255, 0.85);
+
+    box-shadow:
+        0 0 0 3px rgba(255, 255, 255, 0.08),
+        0 0 14px var(--line-color);
+}
+
+.line-dot.unlocked:hover {
+    transform: scale(1.18);
 }
 
 
-.controls button {
-    padding: 9px 15px;
+/* =========================================================
+   WEEK PROGRESS
+   ========================================================= */
 
-    background: #dedbd1;
+.week-progress {
+    position: absolute;
 
-    color: #383631;
+    left: 0;
+    right: 0;
+    bottom: -3px;
 
-    border-radius: 8px;
+    height: 3px;
+
+    overflow: hidden;
+
+    background: rgba(255, 255, 255, 0.055);
+}
+
+.week-progress-fill {
+    height: 100%;
+
+    width: 0%;
+
+    background: rgba(255, 255, 255, 0.85);
+
+    transition:
+        width 0.15s linear;
 }
 
 
-.controls button:hover {
-    background: #d2cec3;
-}
-
-
-.controls button:active {
-    transform: scale(0.96);
-}
-
-
-/* ================================
+/* =========================================================
    GAME AREA
-================================ */
+   ========================================================= */
 
-#gameArea {
+.game-area {
     position: relative;
 
     flex: 1;
 
+    width: 100%;
+
     min-height: 0;
 
-    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 
-    background:
-        radial-gradient(
-            circle at 50% 50%,
-            rgba(255,255,255,0.45),
-            transparent 65%
-        ),
-        #e9e6dc;
+    padding: 20px;
 }
 
 
-#canvas {
-    position: absolute;
+/* =========================================================
+   CANVAS
+   ========================================================= */
 
-    inset: 0;
+canvas {
+    display: block;
 
     width: 100%;
     height: 100%;
 
-    cursor: crosshair;
+    max-width: 1400px;
 
-    touch-action: none;
-}
+    border-radius: 22px;
 
-/* =========================================================
-   AVAILABLE TRAIN DEPOT
-   ========================================================= */
+    background:
+        radial-gradient(
+            circle at center,
+            rgba(255, 255, 255, 0.025),
+            transparent 65%
+        ),
+        rgba(8, 12, 17, 0.65);
 
-.available-train,
-#trainDepot {
-    min-width: 220px;
-    min-height: 105px;
-}
-
-/* ================================
-   INSTRUCTIONS
-================================ */
-
-#instructions {
-    position: absolute;
-
-    top: 20px;
-    left: 50%;
-
-    transform: translateX(-50%);
-
-    display: flex;
-    align-items: center;
-
-    gap: 8px;
-
-    padding: 9px 15px;
-
-    background: rgba(248,247,241,0.9);
-
-    border: 1px solid rgba(0,0,0,0.07);
-
-    border-radius: 999px;
+    border: 1px solid var(--border);
 
     box-shadow:
-        0 5px 20px rgba(0,0,0,0.05);
+        var(--shadow);
 
-    pointer-events: none;
-
-    white-space: nowrap;
-
-    font-size: 12px;
+    cursor: default;
 }
 
 
-#instructions strong {
-    font-weight: 700;
-}
+/* =========================================================
+   DEPOT
+   ========================================================= */
 
-
-#instructions span {
-    color: #77736b;
-}
-
-
-/* ================================
-   BOTTOM PANEL
-================================ */
-
-.bottom-panel {
-    height: 68px;
-
-    flex-shrink: 0;
-
-    display: flex;
-
-    align-items: center;
-    justify-content: space-between;
-
-    padding: 0 28px;
-
-    background: rgba(248,247,241,0.96);
-
-    border-top: 1px solid rgba(0,0,0,0.08);
-
-    z-index: 10;
-}
-
-
-.line-info {
-    display: flex;
-    align-items: center;
-
-    gap: 10px;
-}
-
-
-.line-color {
-    width: 8px;
-    height: 34px;
-
-    border-radius: 10px;
-
-    background: #e85d4a;
-}
-
-
-.line-info div:last-child {
-    display: flex;
-    flex-direction: column;
-}
-
-
-.line-info strong {
-    font-family: "Space Grotesk", sans-serif;
-
-    font-size: 12px;
-}
-
-
-.line-info span {
-    font-size: 11px;
-
-    color: #89857c;
-}
-
-
-.network-info {
-    display: flex;
-
-    gap: 26px;
-
-    font-size: 11px;
-
-    color: #858178;
-}
-
-
-.network-info strong {
-    color: #292824;
-
-    font-family: "Space Grotesk", sans-serif;
-}
-
-
-/* ================================
-   GAME OVER
-================================ */
-
-.overlay {
+.depot {
     position: absolute;
+
+    left: 32px;
+    top: 32px;
+
+    width: 250px;
+
+    min-height: 125px;
+
+    padding: 18px;
+
+    border-radius: 18px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.085),
+            rgba(255, 255, 255, 0.035)
+        );
+
+    border: 1px solid var(--border-strong);
+
+    box-shadow:
+        0 15px 45px rgba(0, 0, 0, 0.24);
+
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+
+    user-select: none;
+}
+
+.depot-title {
+    font-size: 10px;
+
+    font-weight: 700;
+
+    letter-spacing: 0.14em;
+
+    text-transform: uppercase;
+
+    color: var(--muted);
+}
+
+.depot-subtitle {
+    margin-top: 4px;
+
+    font-size: 11px;
+
+    color: #77828e;
+}
+
+
+/* =========================================================
+   TRAIN PLACEMENT
+   ========================================================= */
+
+.train-placement {
+    pointer-events: none;
+}
+
+.placement-ring {
+    position: absolute;
+
+    width: 54px;
+    height: 54px;
+
+    border-radius: 50%;
+
+    border: 2px dashed rgba(255, 255, 255, 0.6);
+
+    transform: translate(-50%, -50%);
+
+    animation:
+        placementPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes placementPulse {
+
+    0% {
+        opacity: 0.45;
+        transform: translate(-50%, -50%) scale(0.9);
+    }
+
+    50% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    100% {
+        opacity: 0.45;
+        transform: translate(-50%, -50%) scale(0.9);
+    }
+}
+
+
+/* =========================================================
+   WEEKLY CHOICE OVERLAY
+   ========================================================= */
+
+#weeklyChoice {
+    position: fixed;
 
     inset: 0;
 
-    z-index: 50;
+    z-index: 9999;
 
     display: flex;
 
     align-items: center;
     justify-content: center;
 
-    background: rgba(35,34,31,0.35);
+    padding: 20px;
 
-    backdrop-filter: blur(5px);
+    background:
+        rgba(4, 7, 11, 0.64);
+
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+
+    animation:
+        weeklyOverlayIn 0.25s ease;
+}
+
+@keyframes weeklyOverlayIn {
+
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 
-.hidden {
-    display: none;
-}
+/* =========================================================
+   WEEKLY CARD
+   ========================================================= */
 
-
-.gameover-card {
-    width: min(420px, calc(100% - 40px));
+.weekly-choice-card {
+    width: min(580px, 100%);
 
     padding: 34px;
 
-    background: #f8f7f1;
+    border-radius: 24px;
 
-    border-radius: 18px;
+    background:
+        linear-gradient(
+            145deg,
+            rgba(30, 38, 48, 0.97),
+            rgba(14, 19, 25, 0.97)
+        );
+
+    border: 1px solid rgba(255, 255, 255, 0.13);
 
     box-shadow:
-        0 25px 80px rgba(0,0,0,0.2);
+        0 35px 100px rgba(0, 0, 0, 0.5);
 
     text-align: center;
+
+    animation:
+        weeklyCardIn 0.35s cubic-bezier(
+            0.2,
+            0.8,
+            0.2,
+            1
+        );
+}
+
+@keyframes weeklyCardIn {
+
+    from {
+        opacity: 0;
+        transform: translateY(18px) scale(0.97);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 
-.eyebrow {
-    margin-bottom: 9px;
+/* =========================================================
+   WEEKLY TEXT
+   ========================================================= */
+
+.weekly-choice-kicker {
+    margin-bottom: 8px;
 
     font-size: 10px;
 
     font-weight: 700;
 
-    letter-spacing: 0.15em;
+    letter-spacing: 0.18em;
 
-    color: #e85d4a;
+    text-transform: uppercase;
+
+    color: #87919c;
 }
 
+.weekly-choice-card h2 {
+    margin: 0;
 
-.gameover-card h2 {
-    margin-bottom: 10px;
+    font-family: "Montserrat", sans-serif;
 
-    font-family: "Space Grotesk", sans-serif;
+    font-size: 29px;
 
-    font-size: 28px;
+    font-weight: 700;
+
+    letter-spacing: -0.025em;
+
+    color: #ffffff;
 }
 
+.weekly-choice-description {
+    max-width: 430px;
 
-.gameover-card > p:not(.eyebrow) {
-    color: #77736b;
-
-    line-height: 1.5;
+    margin: 11px auto 26px;
 
     font-size: 13px;
+
+    line-height: 1.7;
+
+    color: #9da7b2;
 }
 
-
-.final-score {
-    display: flex;
-    flex-direction: column;
-
-    gap: 4px;
-
-    margin: 25px 0;
-}
-
-
-.final-score span {
-    font-size: 11px;
-
-    color: #8b877e;
-}
-
-
-.final-score strong {
-    font-family: "Space Grotesk", sans-serif;
-
-    font-size: 36px;
-}
-
-
-#playAgain {
-    width: 100%;
-
-    padding: 13px;
-
-    border-radius: 9px;
-
-    background: #252525;
-
-    color: white;
-}
-
-
-#playAgain:hover {
-    background: #3a3936;
-}
 
 /* =========================================================
-   WEEK PROGRESS
+   WEEKLY OPTIONS
    ========================================================= */
 
-#weekProgressWrap {
-    display: inline-flex;
+.weekly-choice-options {
+    display: grid;
+
+    grid-template-columns: 1fr 1fr;
+
+    gap: 12px;
+}
+
+
+/* =========================================================
+   WEEKLY OPTION BUTTON
+   ========================================================= */
+
+.weekly-choice-option {
+    min-height: 104px;
+
+    padding: 17px;
+
+    display: flex;
+
     align-items: center;
-    gap: 8px;
-    margin-left: 12px;
-    vertical-align: middle;
+
+    gap: 14px;
+
+    text-align: left;
+
+    border-radius: 17px;
+
+    border: 1px solid rgba(255, 255, 255, 0.1);
+
+    background:
+        rgba(255, 255, 255, 0.045);
+
+    color: #ffffff;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
 }
 
-#weekProgressBar {
-    display: inline-block;
-    width: 180px;
-    height: 9px;
-    background: rgba(0, 0, 0, 0.12);
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    border-radius: 999px;
-    overflow: hidden;
+.weekly-choice-option:hover {
+    transform: translateY(-2px);
+
+    background:
+        rgba(255, 255, 255, 0.075);
+
+    border-color:
+        rgba(255, 255, 255, 0.2);
+
+    box-shadow:
+        0 12px 30px rgba(0, 0, 0, 0.2);
 }
 
-#weekProgressFill {
-    display: block;
-    width: 0%;
-    height: 100%;
-    background: #20242a;
-    border-radius: inherit;
+.weekly-choice-option:active {
+    transform: translateY(0);
 }
 
-#weekProgressPercent {
-    font-size: 11px;
-    font-weight: 600;
-    color: #6b7280;
-    min-width: 30px;
-}
-/* ================================
-   MOBILE
-================================ */
 
-@media (max-width: 700px) {
+/* =========================================================
+   CHOICE ICONS
+   ========================================================= */
+
+.choice-icon {
+    width: 36px;
+    height: 36px;
+
+    flex: 0 0 36px;
+
+    border-radius: 50%;
+
+    background: var(--choice-color);
+
+    box-shadow:
+        0 0 18px color-mix(
+            in srgb,
+            var(--choice-color),
+            transparent 65%
+        );
+}
+
+.choice-train-icon {
+    width: 36px;
+    height: 36px;
+
+    flex: 0 0 36px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    background:
+        rgba(255, 255, 255, 0.08);
+
+    font-size: 19px;
+}
+
+
+/* =========================================================
+   CHOICE TEXT
+   ========================================================= */
+
+.weekly-choice-option span:last-child {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 3px;
+}
+
+.weekly-choice-option strong {
+    font-size: 13px;
+
+    font-weight: 700;
+
+    color: #f5f7fa;
+}
+
+.weekly-choice-option small {
+    font-size: 10px;
+
+    line-height: 1.45;
+
+    color: #89939e;
+}
+
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+
+button {
+    -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.7);
+
+    outline-offset: 3px;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 850px) {
 
     .topbar {
-        height: 64px;
+        align-items: flex-start;
 
-        padding: 0 15px;
-    }
-
-
-    .brand p {
-        display: none;
-    }
-
-
-    .brand h1 {
-        font-size: 14px;
-    }
-
-
-    .stats {
-        gap: 14px;
-    }
-
-
-    .stat span {
-        font-size: 7px;
-    }
-
-
-    .stat strong {
-        font-size: 14px;
-    }
-
-
-    .controls button {
-        padding: 8px 10px;
-
-        font-size: 11px;
-    }
-
-
-    #instructions {
-        top: 12px;
-
-        font-size: 10px;
-    }
-
-
-    #instructions span {
-        display: none;
-    }
-
-
-    .bottom-panel {
-        height: 60px;
-
-        padding: 0 15px;
-    }
-
-
-    .network-info {
         gap: 12px;
 
-        font-size: 9px;
+        padding: 13px 15px;
     }
 
+    .stats {
+        gap: 7px;
+    }
 
-    .line-info span {
-        display: none;
+    .stat {
+        min-width: 68px;
+
+        padding: 7px 10px;
+    }
+
+    .stat-label {
+        font-size: 8px;
+    }
+
+    .stat-value {
+        font-size: 15px;
+    }
+
+    .game-area {
+        padding: 12px;
+    }
+
+    canvas {
+        border-radius: 17px;
+    }
+
+    .depot {
+        left: 22px;
+        top: 22px;
+
+        width: 215px;
+
+        min-height: 110px;
+
+        padding: 14px;
+    }
+
+    .weekly-choice-card {
+        padding: 28px 22px;
+    }
+}
+
+
+@media (max-width: 650px) {
+
+    .topbar {
+        flex-direction: column;
+    }
+
+    #lineStatus {
+        width: 100%;
+    }
+
+    .stats {
+        width: 100%;
+    }
+
+    .game-area {
+        padding: 8px;
+    }
+
+    .depot {
+        width: 190px;
+    }
+
+    .weekly-choice-options {
+        grid-template-columns: 1fr;
+    }
+
+    .weekly-choice-card h2 {
+        font-size: 24px;
+    }
+}
+
+
+@media (max-width: 450px) {
+
+    .stat {
+        min-width: 60px;
+    }
+
+    .stat-label {
+        letter-spacing: 0.07em;
+    }
+
+    .depot {
+        left: 14px;
+        top: 14px;
+
+        width: 175px;
+    }
+
+    .weekly-choice-card {
+        padding: 24px 17px;
+
+        border-radius: 20px;
+    }
+
+    .weekly-choice-option {
+        min-height: 90px;
+
+        padding: 14px;
     }
 }
