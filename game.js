@@ -586,10 +586,6 @@ function update(dt) {
 
     updateWeekProgress();
 
-    updatePassengers(dt);
-    updateTrains(dt);
-
-
     /* STATION SPAWN */
 
     stationSpawnTimer += dt;
@@ -882,15 +878,76 @@ function getTrainSegment(train) {
     const line =
         train.line;
 
+    const stationCount =
+        line.stations.length;
+
+
+    if (stationCount < 2) {
+        return null;
+    }
+
+
+    /*
+        NORMAL LINE
+
+        A → B → C → D
+    */
+
+    if (!line.loop) {
+
+        const from =
+            line.stations[
+                train.segmentIndex
+            ];
+
+        const to =
+            line.stations[
+                train.segmentIndex + 1
+            ];
+
+
+        if (
+            !from ||
+            !to
+        ) {
+            return null;
+        }
+
+
+        return {
+            from,
+            to
+        };
+    }
+
+
+    /*
+        LOOP LINE
+
+        A → B → C → D → A
+
+        The final segment is:
+
+        D → A
+    */
+
+    const fromIndex =
+        train.segmentIndex;
+
+    const toIndex =
+        (
+            train.segmentIndex + 1
+        ) % stationCount;
+
 
     const from =
         line.stations[
-            train.segmentIndex
+            fromIndex
         ];
 
     const to =
         line.stations[
-            train.segmentIndex + 1
+            toIndex
         ];
 
 
@@ -955,64 +1012,54 @@ function updateTrainPosition(train) {
 }
 
 function resetTrainsOnInvalidLines() {
+
     trains.forEach(train => {
 
-         if (!train.placed || !train.line) {
-              return;
-          }
-      
-          const lineExists = lines.some(
-              line => line.id === train.line.id
-          );
-      
-          if (!lineExists) {
-              train.placed = false;
-              train.inDepot = true;
-      
-              train.x = 65;
-              train.y = 70;
-      
-              train.line = null;
-      
-              train.segmentIndex = 0;
-              train.progress = 0;
-              train.direction = 1;
-      
-              train.passengers = [];
-      
-              train.boarding = false;
-              train.boardingTimer = 0;
-              train.boardingStation = null;
-      
-              return;
-          }
-
-        const currentLine = lines.find(
-            line => line.id === train.line.id
-        );
-
-        if (!currentLine) {
-
-            train.placed = false;
-            train.inDepot = true;
-
-            train.x = 65;
-            train.y = 70;
-
-            train.line = null;
-
-            train.segmentIndex = 0;
-            train.progress = 0;
-            train.direction = 1;
-
-            train.passengers = [];
-
-            train.boarding = false;
-            train.boardingTimer = 0;
-            train.boardingStation = null;
-
-            train.angle = 0;
+        if (
+            !train.placed ||
+            !train.line
+        ) {
+            return;
         }
+
+
+        const lineExists =
+            lines.some(
+                line =>
+                    line.id ===
+                    train.line.id
+            );
+
+
+        if (lineExists) {
+            return;
+        }
+
+
+        train.placed = false;
+
+        train.inDepot = true;
+
+        train.x = 65;
+        train.y = 70;
+
+        train.line = null;
+
+        train.segmentIndex = 0;
+
+        train.progress = 0;
+
+        train.direction = 1;
+
+        train.passengers = [];
+
+        train.boarding = false;
+
+        train.boardingTimer = 0;
+
+        train.boardingStation = null;
+
+        train.angle = 0;
     });
 }
 
@@ -1058,24 +1105,43 @@ function arriveAtStation(train) {
         train.line;
 
 
+    if (!line) {
+        return;
+    }
+
+
     let station;
 
+
+    /* =====================================================
+       FIND ARRIVAL STATION
+       ===================================================== */
 
     if (
         train.direction === 1
     ) {
 
+        const segment =
+            getTrainSegment(train);
+
+        if (!segment) {
+            return;
+        }
+
         station =
-            line.stations[
-                train.segmentIndex + 1
-            ];
+            segment.to;
 
     } else {
 
+        const segment =
+            getTrainSegment(train);
+
+        if (!segment) {
+            return;
+        }
+
         station =
-            line.stations[
-                train.segmentIndex
-            ];
+            segment.from;
     }
 
 
@@ -1085,7 +1151,7 @@ function arriveAtStation(train) {
 
 
     /*
-        Snap exactly onto the station.
+        Snap exactly onto station.
     */
 
     train.x =
@@ -1095,9 +1161,9 @@ function arriveAtStation(train) {
         station.y;
 
 
-    /*
-        Drop off passengers.
-    */
+    /* =====================================================
+       UNLOAD
+       ===================================================== */
 
     unloadPassengers(
         train,
@@ -1105,9 +1171,9 @@ function arriveAtStation(train) {
     );
 
 
-    /*
-        Boarding.
-    */
+    /* =====================================================
+       BOARDING
+       ===================================================== */
 
     if (
         train.passengers.length <
@@ -1126,25 +1192,112 @@ function arriveAtStation(train) {
     } else {
 
         train.boarding = false;
-        train.boardingStation = null;
+
+        train.boardingStation =
+            null;
     }
 
 
-    /*
-        FULL ROUTE REVERSAL.
+    /* =====================================================
+       LOOP LINE
+       ===================================================== */
 
-        Forward:
+    if (line.loop) {
 
-        A → B → C → D
+        const stationIndex =
+            line.stations.indexOf(
+                station
+            );
 
-        At D:
 
-        D → C → B → A
+        /*
+            Forward:
 
-        At A:
+            A → B → C → D → A
+        */
 
-        A → B → C → D
-    */
+        if (
+            train.direction === 1
+        ) {
+
+            if (
+                stationIndex ===
+                line.stations.length - 1
+            ) {
+
+                /*
+                    D → A
+
+                    Switch to the
+                    closing segment.
+                */
+
+                train.segmentIndex =
+                    line.stations.length - 1;
+
+                train.progress = 0;
+
+            } else {
+
+                /*
+                    A → B
+                    B → C
+                    etc.
+                */
+
+                train.segmentIndex =
+                    stationIndex;
+
+                train.progress = 0;
+            }
+
+
+        /*
+            Backward:
+
+            A ← B ← C ← D ← A
+        */
+
+        } else {
+
+            if (
+                stationIndex === 0
+            ) {
+
+                /*
+                    A → D
+
+                    Use the closing
+                    D → A segment
+                    backwards.
+                */
+
+                train.segmentIndex =
+                    line.stations.length - 1;
+
+                train.progress = 1;
+
+            } else {
+
+                train.segmentIndex =
+                    stationIndex - 1;
+
+                train.progress = 1;
+            }
+        }
+
+
+        updateTrainAngle(train);
+
+        updateStats();
+
+        return;
+    }
+
+
+    /* =====================================================
+       NORMAL LINE
+       ===================================================== */
 
     if (
         train.direction === 1
@@ -1157,6 +1310,8 @@ function arriveAtStation(train) {
 
             /*
                 At final station.
+
+                D → C
             */
 
             train.direction = -1;
@@ -1182,6 +1337,8 @@ function arriveAtStation(train) {
 
             /*
                 At first station.
+
+                A → B
             */
 
             train.direction = 1;
@@ -1189,10 +1346,6 @@ function arriveAtStation(train) {
             train.progress = 0;
 
         } else {
-
-            /*
-                Move backward one segment.
-            */
 
             train.segmentIndex--;
 
@@ -1206,44 +1359,6 @@ function arriveAtStation(train) {
     );
 
     updateStats();
-}
-
-
-/* =========================================================
-   UNLOAD
-========================================================= */
-
-function unloadPassengers(
-    train,
-    station
-) {
-
-    const remaining = [];
-
-
-    for (
-        const passenger of
-        train.passengers
-    ) {
-
-        if (
-            passenger.destination ===
-            station
-        ) {
-
-            score++;
-
-        } else {
-
-            remaining.push(
-                passenger
-            );
-        }
-    }
-
-
-    train.passengers =
-        remaining;
 }
 
 
@@ -1376,17 +1491,17 @@ function createLine(firstStation, secondStation) {
     }
 
     const line = {
-        id: Date.now() + Math.random(),
-
-        color: LINE_COLORS[colorIndex],
-
-        colorIndex: colorIndex,
-
-        stations: [
-            firstStation,
-            secondStation
-        ]
-    };
+       id: Date.now() + Math.random(),
+       color: LINE_COLORS[colorIndex],
+       colorIndex: colorIndex,
+   
+       stations: [
+           firstStation,
+           secondStation
+       ],
+   
+       loop: false
+   };
 
     lines.push(line);
 
@@ -1544,248 +1659,167 @@ function unlockNextLine() {
    EXTEND LINE
 ========================================================= */
 
-function connectStations(
-    firstStation,
-    secondStation
-) {
+function connectStations(firstStation, secondStation) {
 
-    if (
-        !firstStation ||
-        !secondStation
-    ) {
-        return;
-    }
-
-
-    if (
-        firstStation ===
-        secondStation
-    ) {
+    if (firstStation === secondStation) {
         return;
     }
 
 
     /*
-        Check whether we're extending
-        an existing line.
-    */
+     * ---------------------------------------------------------
+     * CHECK WHETHER THESE TWO STATIONS ARE ALREADY ON
+     * THE SAME LINE
+     * ---------------------------------------------------------
+     */
 
-    for (
-        const line of lines
-    ) {
+    const sameLine = lines.find(line =>
+        line.stations.includes(firstStation) &&
+        line.stations.includes(secondStation)
+    );
+
+
+    /*
+     * ---------------------------------------------------------
+     * CLOSE THE LINE INTO A LOOP
+     * ---------------------------------------------------------
+     */
+
+    if (sameLine) {
 
         const firstIndex =
-            line.stations.indexOf(
-                firstStation
-            );
-
+            sameLine.stations.indexOf(firstStation);
 
         const secondIndex =
-            line.stations.indexOf(
-                secondStation
-            );
-
-
-        if (
-            firstIndex === -1 ||
-            secondIndex !== -1
-        ) {
-            continue;
-        }
+            sameLine.stations.indexOf(secondStation);
 
 
         /*
-            EXTEND AT BEGINNING
-        */
+         * Only allow the two ENDPOINTS to be connected.
+         *
+         * Example:
+         *
+         * A ─ B ─ C ─ D
+         *
+         * Dragging D → A closes the loop.
+         */
+
+        const firstIsEndpoint =
+            firstIndex === 0 ||
+            firstIndex === sameLine.stations.length - 1;
+
+        const secondIsEndpoint =
+            secondIndex === 0 ||
+            secondIndex === sameLine.stations.length - 1;
+
 
         if (
-            firstIndex === 0
+            firstIsEndpoint &&
+            secondIsEndpoint &&
+            firstIndex !== secondIndex
         ) {
 
-            const oldFirst =
-                line.stations[0];
-
-
-            line.stations.unshift(
-                secondStation
-            );
-
-
-            /*
-                Existing train route indexes
-                shift by one.
-            */
-
-            for (
-                const train of trains
-            ) {
-
-                if (
-                    train.line !== line
-                ) {
-                    continue;
-                }
-
-
-                const atOldFirst =
-                    Math.hypot(
-                        train.x -
-                            oldFirst.x,
-
-                        train.y -
-                            oldFirst.y
-                    ) < 3;
-
-
-                if (atOldFirst) {
-
-                    /*
-                        Train is at the old
-                        first station.
-
-                        Send it toward the
-                        newly added station.
-                    */
-
-                    train.segmentIndex = 0;
-
-                    train.progress = 1;
-
-                    train.direction = -1;
-
-                } else {
-
-                    train.segmentIndex++;
-                }
-
-
-                updateTrainPosition(
-                    train
-                );
-            }
-
+            sameLine.loop = true;
 
             updateStats();
+            updateLineStatus();
             draw();
 
             return;
         }
 
 
-        /*
-            EXTEND AT END
-        */
+        return;
+    }
+
+
+    /*
+     * ---------------------------------------------------------
+     * EXTEND AN EXISTING LINE
+     * ---------------------------------------------------------
+     */
+
+    const firstLine = lines.find(line =>
+        !line.loop &&
+        (
+            line.stations[0] === firstStation ||
+            line.stations[line.stations.length - 1] === firstStation
+        )
+    );
+
+
+    if (firstLine) {
 
         if (
-            firstIndex ===
-            line.stations.length - 1
+            firstLine.stations[0] === firstStation
         ) {
 
-            const oldLast =
-                line.stations[
-                    line.stations.length - 1
-                ];
+            firstLine.stations.unshift(secondStation);
 
+        } else {
 
-            line.stations.push(
-                secondStation
-            );
+            firstLine.stations.push(secondStation);
 
-
-            for (
-                const train of trains
-            ) {
-
-                if (
-                    train.line !== line
-                ) {
-                    continue;
-                }
-
-
-                const atOldLast =
-                    Math.hypot(
-                        train.x -
-                            oldLast.x,
-
-                        train.y -
-                            oldLast.y
-                    ) < 3;
-
-
-                if (atOldLast) {
-
-                    /*
-                        Continue onto the
-                        newly added station.
-                    */
-
-                    train.segmentIndex =
-                        line.stations.length - 2;
-
-                    train.progress = 0;
-
-                    train.direction = 1;
-                }
-
-
-                updateTrainPosition(
-                    train
-                );
-            }
-
-
-            updateStats();
-            draw();
-
-            return;
         }
+
+        updateStats();
+        updateLineStatus();
+        draw();
+
+        return;
     }
 
 
     /*
-        Don't duplicate an existing
-        segment.
-    */
+     * ---------------------------------------------------------
+     * TRY THE OTHER STATION AS AN EXISTING ENDPOINT
+     * ---------------------------------------------------------
+     *
+     * This fixes another subtle issue:
+     *
+     * New → Existing
+     *
+     * should work the same as:
+     *
+     * Existing → New
+     */
 
-    for (
-        const line of lines
-    ) {
+    const secondLine = lines.find(line =>
+        !line.loop &&
+        (
+            line.stations[0] === secondStation ||
+            line.stations[line.stations.length - 1] === secondStation
+        )
+    );
 
-        for (
-            let i = 0;
-            i <
-            line.stations.length - 1;
-            i++
+
+    if (secondLine) {
+
+        if (
+            secondLine.stations[0] === secondStation
         ) {
 
-            const a =
-                line.stations[i];
+            secondLine.stations.unshift(firstStation);
 
-            const b =
-                line.stations[i + 1];
+        } else {
 
+            secondLine.stations.push(firstStation);
 
-            if (
-                (
-                    a === firstStation &&
-                    b === secondStation
-                ) ||
-                (
-                    a === secondStation &&
-                    b === firstStation
-                )
-            ) {
-
-                return;
-            }
         }
+
+        updateStats();
+        updateLineStatus();
+        draw();
+
+        return;
     }
 
 
     /*
-        New line = new permanent color.
-    */
+     * ---------------------------------------------------------
+     * OTHERWISE CREATE A NEW LINE
+     * ---------------------------------------------------------
+     */
 
     createLine(
         firstStation,
@@ -1992,7 +2026,52 @@ function setTrainAtStation(
 
 
     /*
-        FIRST STATION
+        =====================================================
+        LOOP LINE
+        =====================================================
+    */
+
+    if (line.loop) {
+
+        /*
+            Put the train at the station
+            and have it travel forward.
+        */
+
+        if (
+            index ===
+            line.stations.length - 1
+        ) {
+
+            /*
+                Last station → first station
+            */
+
+            train.segmentIndex =
+                line.stations.length - 1;
+
+            train.progress = 0;
+
+        } else {
+
+            train.segmentIndex =
+                index;
+
+            train.progress = 0;
+        }
+
+        train.direction = 1;
+
+        updateTrainPosition(train);
+
+        return;
+    }
+
+
+    /*
+        =====================================================
+        NORMAL LINE
+        =====================================================
     */
 
     if (
@@ -2004,14 +2083,8 @@ function setTrainAtStation(
         train.progress = 0;
 
         train.direction = 1;
-    }
 
-
-    /*
-        LAST STATION
-    */
-
-    else if (
+    } else if (
         index ===
         line.stations.length - 1
     ) {
@@ -2022,14 +2095,8 @@ function setTrainAtStation(
         train.progress = 1;
 
         train.direction = -1;
-    }
 
-
-    /*
-        MIDDLE STATION
-    */
-
-    else {
+    } else {
 
         train.segmentIndex =
             index;
@@ -2044,7 +2111,6 @@ function setTrainAtStation(
         train
     );
 }
-
 
 /* =========================================================
    FIND CLOSEST RAIL
