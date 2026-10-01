@@ -2656,20 +2656,21 @@ function removeRailAt(
 ) {
 
     for (
-        let li =
-            lines.length - 1;
+        let li = lines.length - 1;
         li >= 0;
         li--
     ) {
 
-        const line =
-            lines[li];
+        const line = lines[li];
+
+        const segmentCount = line.loop
+            ? line.stations.length
+            : line.stations.length - 1;
 
 
         for (
             let i = 0;
-            i <
-            line.stations.length - 1;
+            i < segmentCount;
             i++
         ) {
 
@@ -2677,7 +2678,10 @@ function removeRailAt(
                 line.stations[i];
 
             const b =
-                line.stations[i + 1];
+                line.stations[
+                    (i + 1) %
+                    line.stations.length
+                ];
 
 
             const closest =
@@ -2709,18 +2713,20 @@ function removeRailAt(
                     ) {
 
                         if (
-                            train.line ===
-                            line
+                            train.line === line
                         ) {
 
-                            train.line =
-                                null;
+                            train.line = null;
 
                             train.segmentIndex = 0;
 
                             train.progress = 0;
 
                             train.direction = 1;
+
+                            train.boarding = false;
+
+                            train.boardingStation = null;
                         }
                     }
 
@@ -2730,9 +2736,152 @@ function removeRailAt(
                         1
                     );
 
+                } else if (line.loop) {
+
+                    /*
+                        Removing a section from a loop
+                        opens the loop.
+
+                        We keep the stations in their
+                        existing order and split the loop
+                        at the removed closing segment.
+                    */
+
+                    if (
+                        i ===
+                        line.stations.length - 1
+                    ) {
+
+                        /*
+                            Removing the last → first
+                            segment simply turns the loop
+                            into a normal line.
+                        */
+
+                        line.loop = false;
+
+                        for (
+                            const train of trains
+                        ) {
+
+                            if (
+                                train.line === line
+                            ) {
+
+                                train.line = null;
+                                train.segmentIndex = 0;
+                                train.progress = 0;
+                                train.direction = 1;
+                                train.boarding = false;
+                                train.boardingStation = null;
+                            }
+                        }
+
+                    } else {
+
+                        /*
+                            Removing an internal loop
+                            segment breaks the circular
+                            route into two pieces.
+                        */
+
+                        const firstPart =
+                            line.stations.slice(
+                                i + 1
+                            );
+
+                        const secondPart =
+                            line.stations.slice(
+                                0,
+                                i + 1
+                            );
+
+
+                        lines.splice(
+                            li,
+                            1
+                        );
+
+
+                        if (
+                            firstPart.length >= 2
+                        ) {
+
+                            lines.push({
+
+                                id:
+                                    Date.now() +
+                                    Math.random(),
+
+                                color:
+                                    line.color,
+
+                                colorIndex:
+                                    line.colorIndex,
+
+                                stations:
+                                    firstPart,
+
+                                loop:
+                                    false
+                            });
+                        }
+
+
+                        if (
+                            secondPart.length >= 2
+                        ) {
+
+                            lines.push({
+
+                                id:
+                                    Date.now() +
+                                    Math.random(),
+
+                                color:
+                                    line.color,
+
+                                colorIndex:
+                                    line.colorIndex,
+
+                                stations:
+                                    secondPart,
+
+                                loop:
+                                    false
+                            });
+                        }
+
+                        /*
+                            Trains that belonged to
+                            the old loop must detach.
+                        */
+
+                        for (
+                            const train of trains
+                        ) {
+
+                            if (
+                                train.line === line
+                            ) {
+
+                                train.line = null;
+
+                                train.segmentIndex = 0;
+                                train.progress = 0;
+                                train.direction = 1;
+
+                                train.boarding = false;
+                                train.boardingStation = null;
+                            }
+                        }
+                    }
+
                 } else {
 
                     /*
+                        Normal line.
+
                         Split the line.
 
                         BOTH resulting pieces
@@ -2767,15 +2916,18 @@ function removeRailAt(
                             id:
                                 Date.now() +
                                 Math.random(),
-                        
+
                             color:
                                 line.color,
-                        
+
                             colorIndex:
                                 line.colorIndex,
-                        
+
                             stations:
-                                leftStations
+                                leftStations,
+
+                            loop:
+                                false
                         });
                     }
 
@@ -2789,15 +2941,18 @@ function removeRailAt(
                             id:
                                 Date.now() +
                                 Math.random(),
-                        
+
                             color:
                                 line.color,
-                        
+
                             colorIndex:
                                 line.colorIndex,
-                        
+
                             stations:
-                                rightStations
+                                rightStations,
+
+                            loop:
+                                false
                         });
                     }
 
@@ -2815,14 +2970,23 @@ function removeRailAt(
                             train.line === line
                         ) {
 
-                            train.line =
-                                null;
+                            train.line = null;
+
+                            train.segmentIndex = 0;
+                            train.progress = 0;
+                            train.direction = 1;
+
+                            train.boarding = false;
+                            train.boardingStation = null;
                         }
                     }
                 }
+
+
                 resetTrainsOnInvalidLines();
 
                 updateStats();
+
                 draw();
 
                 return true;
@@ -2833,7 +2997,6 @@ function removeRailAt(
 
     return false;
 }
-
 
 /* =========================================================
    DRAW
@@ -2892,11 +3055,14 @@ function drawLines() {
         }
 
 
+        const segmentCount = line.loop
+            ? line.stations.length
+            : line.stations.length - 1;
+
+
         /*
             One single stroke for the
             ENTIRE line.
-
-            No per-segment recoloring.
         */
 
         ctx.beginPath();
@@ -2910,20 +3076,26 @@ function drawLines() {
 
         for (
             let i = 1;
-            i < line.stations.length;
+            i <= segmentCount;
             i++
         ) {
 
+            const station =
+                line.stations[
+                    i %
+                    line.stations.length
+                ];
+
+
             ctx.lineTo(
-                line.stations[i].x,
-                line.stations[i].y
+                station.x,
+                station.y
             );
         }
 
 
         ctx.strokeStyle =
             line.color;
-
 
         ctx.lineWidth = 7;
 
@@ -2932,7 +3104,6 @@ function drawLines() {
 
         ctx.lineJoin =
             "round";
-
 
         ctx.stroke();
     }
@@ -2960,9 +3131,16 @@ function drawLines() {
                 target.line;
 
 
+            const segmentCount =
+                line.loop
+                    ? line.stations.length
+                    : line.stations.length - 1;
+
+
             ctx.save();
 
             ctx.beginPath();
+
 
             ctx.moveTo(
                 line.stations[0].x,
@@ -2972,14 +3150,20 @@ function drawLines() {
 
             for (
                 let i = 1;
-                i <
-                line.stations.length;
+                i <= segmentCount;
                 i++
             ) {
 
+                const station =
+                    line.stations[
+                        i %
+                        line.stations.length
+                    ];
+
+
                 ctx.lineTo(
-                    line.stations[i].x,
-                    line.stations[i].y
+                    station.x,
+                    station.y
                 );
             }
 
@@ -3005,7 +3189,6 @@ function drawLines() {
         }
     }
 }
-
 
 /* =========================================================
    RAIL PREVIEW
@@ -3186,6 +3369,10 @@ function drawTrainPlacementPreview() {
         /*
             Ghost train aligned with
             the selected rail.
+
+            IMPORTANT:
+            Supports the loop's
+            final → first segment.
         */
 
         const a =
@@ -3195,7 +3382,10 @@ function drawTrainPlacementPreview() {
 
         const b =
             rail.line.stations[
-                rail.index + 1
+                (
+                    rail.index + 1
+                ) %
+                rail.line.stations.length
             ];
 
 
@@ -3246,7 +3436,6 @@ function drawTrainPlacementPreview() {
 
     ctx.restore();
 }
-
 
 /* =========================================================
    DRAW STATIONS
