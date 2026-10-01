@@ -1,5 +1,81 @@
+const STATION_RADIUS = 16;
+const STATION_MIN_DISTANCE = 105;
+const MAX_STATIONS = 18;
+const MAX_WAITING = 12;
+
+const TRAIN_SPEED = 100;
+const TRAIN_CAPACITY = 6;
+const BOARDING_TIME_PER_PASSENGER = 0.45;
+
+const WEEK_DURATION = 30;
+
+const STATION_SPAWN_MIN = 8;
+const STATION_SPAWN_MAX = 10;
+
+const PASSENGER_SPAWN_TIME = 4;
+
+const COLORS = {
+    background: "#eef2f5",
+    stationFill: "#ffffff",
+    stationStroke: "#1c1f24",
+    rail: "#30343b",
+    train: "#16181c",
+    trainWindow: "#eef2f5",
+    passenger: "#20242a",
+    text: "#17191d",
+    muted: "#6b7280"
+};
+
+
 /* =========================================================
-   MINI METRO STYLE GAME
+   LINE COLORS
+   ========================================================= */
+
+const LINE_COLORS = [
+    "#3b82f6",
+    "#ef4444",
+    "#8b5cf6",
+    "#10b981",
+    "#f59e0b"
+];
+
+let nextLineColorIndex = 0;
+
+
+/* =========================================================
+   GAME STATE
+   ========================================================= */
+
+let stations = [];
+let lines = [];
+let passengers = [];
+let trains = [];
+
+let score = 0;
+let week = 1;
+
+let paused = false;
+let gameOver = false;
+
+let lastTime = performance.now();
+
+let weekTimer = 0;
+let passengerTimer = 0;
+
+let stationSpawnTimer = 0;
+let nextStationSpawn = randomStationSpawnTime();
+
+let draggingRail = false;
+let railStartStation = null;
+
+let pointerX = 0;
+let pointerY = 0;
+
+let draggingTrain = null;
+
+
+/* =========================================================
+   DOM
    ========================================================= */
 
 const canvas = document.getElementById("canvas");
@@ -22,172 +98,55 @@ const gameOverEl = document.getElementById("gameOver");
 const finalScoreEl = document.getElementById("finalScore");
 const playAgainBtn = document.getElementById("playAgain");
 
-
-/* =========================================================
-   CONFIG
-   ========================================================= */
-
-const STATION_RADIUS = 16;
-
-const STATION_MIN_DISTANCE = 105;
-const MAX_STATIONS = 18;
-
-const MAX_WAITING = 12;
-
-const TRAIN_SPEED = 100;
-const TRAIN_CAPACITY = 6;
-
-const BOARDING_TIME_PER_PASSENGER = 0.45;
-
-const WEEK_DURATION = 30;
-
-// Stations spawn independently of the week.
-const STATION_SPAWN_MIN = 8;
-const STATION_SPAWN_MAX = 10;
-
-const PASSENGER_SPAWN_TIME = 4;
-
-
-/* =========================================================
-   COLORS
-   ========================================================= */
-
-const COLORS = {
-    background: "#eef2f5",
-
-    stationFill: "#ffffff",
-    stationStroke: "#1c1f24",
-
-    rail: "#30343b",
-
-    train: "#16181c",
-    trainWindow: "#eef2f5",
-
-    passenger: "#20242a",
-
-    text: "#17191d",
-    muted: "#6b7280"
-};
-
-
-/* =========================================================
-   GAME STATE
-   ========================================================= */
-
-let stations = [];
-let lines = [];
-let passengers = [];
-let trains = [];
-
-let score = 0;
-let week = 1;
-
-let paused = false;
-let gameOver = false;
-
-let lastTime = performance.now();
-
-let weekTimer = 0;
-
-let passengerTimer = 0;
-
-let stationSpawnTimer = 0;
-let nextStationSpawn = randomStationSpawnTime();
-
-
-/* =========================================================
-   INPUT STATE
-   ========================================================= */
-
-let draggingRail = false;
-let railStartStation = null;
-let pointerX = 0;
-let pointerY = 0;
-
-let draggingTrain = null;
-
-
-/* =========================================================
-   CANVAS
-   ========================================================= */
-
-function resizeCanvas() {
-
-    const rect = gameArea.getBoundingClientRect();
-
-    const dpr = window.devicePixelRatio || 1;
-
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-
-    canvas.style.width = rect.width + "px";
-    canvas.style.height = rect.height + "px";
-
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    draw();
-}
-
-window.addEventListener("resize", resizeCanvas);
-
-
-/* =========================================================
-   WEEK PROGRESS BAR
-   ========================================================= */
-
 let weekProgressWrap = null;
 let weekProgressFill = null;
 let weekProgressPercent = null;
 
-function createWeekProgressBar() {
 
-    if (!weekEl || document.getElementById("weekProgressWrap")) {
-        return;
-    }
+/* =========================================================
+   INITIAL SETUP
+   ========================================================= */
 
-    weekProgressWrap = document.createElement("span");
+function resizeCanvas() {
+    const rect = gameArea.getBoundingClientRect();
 
-    weekProgressWrap.id = "weekProgressWrap";
+    canvas.width = rect.width;
+    canvas.height = rect.height;
 
-    weekProgressWrap.innerHTML = `
-        <span id="weekProgressBar">
-            <span id="weekProgressFill"></span>
-        </span>
-        <span id="weekProgressPercent">0%</span>
-    `;
-
-    weekEl.insertAdjacentElement("afterend", weekProgressWrap);
-
-    weekProgressFill =
-        document.getElementById("weekProgressFill");
-
-    weekProgressPercent =
-        document.getElementById("weekProgressPercent");
+    draw();
 }
 
 
-/* =========================================================
-   STATION SPAWN TIMER
-   ========================================================= */
-
-function randomStationSpawnTime() {
-
-    return STATION_SPAWN_MIN +
-        Math.random() *
-        (STATION_SPAWN_MAX - STATION_SPAWN_MIN);
-}
-
-
-/* =========================================================
-   INITIAL STATIONS
-   ========================================================= */
-
-function createInitialStations() {
+function initGame() {
 
     stations = [];
+    lines = [];
+    passengers = [];
+    trains = [];
 
-    const w = canvas.clientWidth;
-    const h = canvas.clientHeight;
+    score = 0;
+    week = 1;
+
+    paused = false;
+    gameOver = false;
+
+    weekTimer = 0;
+    passengerTimer = 0;
+
+    stationSpawnTimer = 0;
+    nextStationSpawn = randomStationSpawnTime();
+
+    nextLineColorIndex = 0;
+
+    draggingRail = false;
+    railStartStation = null;
+
+    draggingTrain = null;
+
+    createWeekProgressBar();
+
+    const w = canvas.width;
+    const h = canvas.height;
 
     stations.push({
         id: 1,
@@ -212,16 +171,6 @@ function createInitialStations() {
         y: h * 0.55,
         waiting: []
     });
-}
-
-
-/* =========================================================
-   TRAIN
-   ========================================================= */
-
-function createInitialTrain() {
-
-    trains = [];
 
     trains.push({
         id: 1,
@@ -230,22 +179,93 @@ function createInitialTrain() {
         inDepot: true,
 
         x: 65,
-        y: 65,
+        y: 70,
 
         line: null,
 
-        currentIndex: 0,
+        // Segment-based movement
+        segmentIndex: 0,
         progress: 0,
-
-        reverse: false,
+        direction: 1,
 
         passengers: [],
 
         boarding: false,
         boardingTimer: 0,
+        boardingStation: null,
 
         angle: 0
     });
+
+    updateStats();
+    updateWeekProgress();
+
+    draw();
+}
+
+
+/* =========================================================
+   WEEK PROGRESS
+   ========================================================= */
+
+function createWeekProgressBar() {
+
+    if (!weekEl || document.getElementById("weekProgressWrap")) return;
+
+    weekProgressWrap = document.createElement("span");
+
+    weekProgressWrap.id = "weekProgressWrap";
+
+    weekProgressWrap.innerHTML = `
+        <span id="weekProgressBar">
+            <span id="weekProgressFill"></span>
+        </span>
+
+        <span id="weekProgressPercent">0%</span>
+    `;
+
+    weekEl.insertAdjacentElement(
+        "afterend",
+        weekProgressWrap
+    );
+
+    weekProgressFill =
+        document.getElementById("weekProgressFill");
+
+    weekProgressPercent =
+        document.getElementById("weekProgressPercent");
+}
+
+
+function updateWeekProgress() {
+
+    if (!weekProgressFill) return;
+
+    const progress =
+        Math.min(weekTimer / WEEK_DURATION, 1);
+
+    const percent =
+        Math.floor(progress * 100);
+
+    weekProgressFill.style.width =
+        `${percent}%`;
+
+    if (weekProgressPercent) {
+        weekProgressPercent.textContent =
+            `${percent}%`;
+    }
+}
+
+
+/* =========================================================
+   RANDOM STATION TIMER
+   ========================================================= */
+
+function randomStationSpawnTime() {
+
+    return STATION_SPAWN_MIN +
+        Math.random() *
+        (STATION_SPAWN_MAX - STATION_SPAWN_MIN);
 }
 
 
@@ -255,12 +275,7 @@ function createInitialTrain() {
 
 function spawnRandomStation() {
 
-    if (stations.length >= MAX_STATIONS) {
-        return;
-    }
-
-    const w = canvas.clientWidth;
-    const h = canvas.clientHeight;
+    if (stations.length >= MAX_STATIONS) return;
 
     const types = [
         "circle",
@@ -268,17 +283,19 @@ function spawnRandomStation() {
         "square"
     ];
 
+    const padding = 55;
+
     for (let attempt = 0; attempt < 100; attempt++) {
 
         const x =
-            45 +
+            padding +
             Math.random() *
-            Math.max(1, w - 90);
+            (canvas.width - padding * 2);
 
         const y =
-            80 +
+            padding +
             Math.random() *
-            Math.max(1, h - 125);
+            (canvas.height - padding * 2);
 
         let valid = true;
 
@@ -291,29 +308,18 @@ function spawnRandomStation() {
                 Math.sqrt(dx * dx + dy * dy);
 
             if (distance < STATION_MIN_DISTANCE) {
-
                 valid = false;
                 break;
             }
         }
 
-        if (!valid) {
-            continue;
-        }
+        if (!valid) continue;
 
         stations.push({
             id: Date.now() + Math.random(),
-
-            type:
-                types[
-                    Math.floor(
-                        Math.random() * types.length
-                    )
-                ],
-
+            type: types[Math.floor(Math.random() * types.length)],
             x,
             y,
-
             waiting: []
         });
 
@@ -331,1022 +337,128 @@ function spawnRandomStation() {
 
 function spawnPassenger() {
 
-    if (stations.length < 2) {
-        return;
-    }
+    if (stations.length < 2) return;
 
-    if (passengers.length >= MAX_WAITING) {
-        return;
-    }
+    const available =
+        stations.filter(station => {
+            return station.waiting.length < MAX_WAITING;
+        });
+
+    if (available.length === 0) return;
 
     const origin =
-        stations[
+        available[
+            Math.floor(Math.random() * available.length)
+        ];
+
+    const possibleDestinations =
+        stations.filter(station => {
+            return station !== origin;
+        });
+
+    if (possibleDestinations.length === 0) return;
+
+    const destination =
+        possibleDestinations[
             Math.floor(
-                Math.random() * stations.length
+                Math.random() *
+                possibleDestinations.length
             )
         ];
 
-    let destination;
-
-    do {
-
-        destination =
-            stations[
-                Math.floor(
-                    Math.random() * stations.length
-                )
-            ];
-
-    } while (
-        destination === origin &&
-        stations.length > 1
-    );
-
     const passenger = {
         id: Date.now() + Math.random(),
-
         origin,
-        destination,
-
-        type: destination.type
+        destination
     };
-
-    passengers.push(passenger);
 
     origin.waiting.push(passenger);
+    passengers.push(passenger);
 
     updateStats();
 }
 
 
 /* =========================================================
-   STATION SHAPES
+   UPDATE LOOP
    ========================================================= */
 
-function drawStationShape(type, x, y, size) {
+function update(dt) {
 
-    ctx.beginPath();
+    if (paused || gameOver) return;
 
-    if (type === "circle") {
+    /* -------------------------
+       WEEK
+    ------------------------- */
 
-        ctx.arc(
-            x,
-            y,
-            size,
-            0,
-            Math.PI * 2
-        );
-    }
+    weekTimer += dt;
 
-    else if (type === "triangle") {
+    if (weekTimer >= WEEK_DURATION) {
 
-        ctx.moveTo(
-            x,
-            y - size
-        );
+        weekTimer -= WEEK_DURATION;
 
-        ctx.lineTo(
-            x + size,
-            y + size
-        );
-
-        ctx.lineTo(
-            x - size,
-            y + size
-        );
-
-        ctx.closePath();
-    }
-
-    else if (type === "square") {
-
-        ctx.rect(
-            x - size,
-            y - size,
-            size * 2,
-            size * 2
-        );
-    }
-
-    ctx.fillStyle = COLORS.stationFill;
-
-    ctx.fill();
-
-    ctx.lineWidth = 3;
-
-    ctx.strokeStyle = COLORS.stationStroke;
-
-    ctx.stroke();
-}
-
-
-/* =========================================================
-   PASSENGER DESTINATION ICON
-   ========================================================= */
-
-function drawPassengerIcon(type, x, y, size) {
-
-    ctx.beginPath();
-
-    if (type === "circle") {
-
-        ctx.arc(
-            x,
-            y,
-            size,
-            0,
-            Math.PI * 2
-        );
-    }
-
-    else if (type === "triangle") {
-
-        ctx.moveTo(
-            x,
-            y - size
-        );
-
-        ctx.lineTo(
-            x + size,
-            y + size
-        );
-
-        ctx.lineTo(
-            x - size,
-            y + size
-        );
-
-        ctx.closePath();
-    }
-
-    else if (type === "square") {
-
-        ctx.rect(
-            x - size,
-            y - size,
-            size * 2,
-            size * 2
-        );
-    }
-
-    ctx.fillStyle = COLORS.passenger;
-
-    ctx.fill();
-}
-
-
-/* =========================================================
-   DRAW STATIONS
-   ========================================================= */
-
-function drawStations() {
-
-    for (const station of stations) {
-
-        drawStationShape(
-            station.type,
-            station.x,
-            station.y,
-            STATION_RADIUS
-        );
-
-        drawWaitingPassengers(station);
-    }
-}
-
-
-/* =========================================================
-   DRAW WAITING PASSENGERS
-   ========================================================= */
-
-function drawWaitingPassengers(station) {
-
-    const waiting = station.waiting;
-
-    const maxVisible = Math.min(
-        waiting.length,
-        10
-    );
-
-    for (let i = 0; i < maxVisible; i++) {
-
-        const passenger = waiting[i];
-
-        const angle =
-            (Math.PI * 2 / maxVisible) * i
-            - Math.PI / 2;
-
-        const distance = 28;
-
-        const x =
-            station.x +
-            Math.cos(angle) * distance;
-
-        const y =
-            station.y +
-            Math.sin(angle) * distance;
-
-        drawPassengerIcon(
-            passenger.type,
-            x,
-            y,
-            5
-        );
-    }
-
-    if (waiting.length > maxVisible) {
-
-        ctx.fillStyle = COLORS.text;
-
-        ctx.font = "bold 10px Poppins, sans-serif";
-
-        ctx.textAlign = "center";
-
-        ctx.fillText(
-            `+${waiting.length - maxVisible}`,
-            station.x,
-            station.y + 34
-        );
-    }
-}
-
-
-/* =========================================================
-   DRAW LINES
-   ========================================================= */
-
-function drawLines() {
-
-    for (const line of lines) {
-
-        if (line.stations.length < 2) {
-            continue;
-        }
-
-        ctx.beginPath();
-
-        ctx.moveTo(
-            line.stations[0].x,
-            line.stations[0].y
-        );
-
-        for (let i = 1; i < line.stations.length; i++) {
-
-            ctx.lineTo(
-                line.stations[i].x,
-                line.stations[i].y
-            );
-        }
-
-        ctx.strokeStyle = line.color;
-
-        ctx.lineWidth = 7;
-
-        ctx.lineCap = "round";
-
-        ctx.lineJoin = "round";
-
-        ctx.stroke();
-    }
-}
-
-
-/* =========================================================
-   LINE COLORS
-   ========================================================= */
-
-const LINE_COLORS = [
-    "#3b82f6",
-    "#ef4444",
-    "#8b5cf6",
-    "#10b981",
-    "#f59e0b"
-];
-
-
-/* =========================================================
-   CREATE LINE
-   ========================================================= */
-
-function createLine(firstStation, secondStation) {
-
-    const line = {
-
-        id: Date.now() + Math.random(),
-
-        color:
-            LINE_COLORS[
-                lines.length %
-                LINE_COLORS.length
-            ],
-
-        stations: [
-            firstStation,
-            secondStation
-        ]
-    };
-
-    lines.push(line);
-
-    tryAssignWaitingTrains();
-
-    updateStats();
-
-    draw();
-}
-
-
-/* =========================================================
-   CONNECT STATIONS
-   ========================================================= */
-
-function connectStations(firstStation, secondStation) {
-
-    if (!firstStation || !secondStation) {
-        return;
-    }
-
-    if (firstStation === secondStation) {
-        return;
-    }
-
-    // Try extending an existing line.
-    for (const line of lines) {
-
-        const firstIndex =
-            line.stations.indexOf(firstStation);
-
-        const secondIndex =
-            line.stations.indexOf(secondStation);
-
-        if (
-            firstIndex !== -1 &&
-            secondIndex === -1
-        ) {
-
-            if (
-                firstIndex === 0 ||
-                firstIndex === line.stations.length - 1
-            ) {
-
-                if (firstIndex === 0) {
-
-                    line.stations.unshift(
-                        secondStation
-                    );
-                }
-
-                else {
-
-                    line.stations.push(
-                        secondStation
-                    );
-                }
-
-                tryAssignWaitingTrains();
-
-                updateStats();
-
-                draw();
-
-                return;
-            }
-        }
-    }
-
-    // If both are already connected, do nothing.
-    for (const line of lines) {
-
-        for (let i = 0; i < line.stations.length - 1; i++) {
-
-            if (
-                (
-                    line.stations[i] === firstStation &&
-                    line.stations[i + 1] === secondStation
-                ) ||
-                (
-                    line.stations[i] === secondStation &&
-                    line.stations[i + 1] === firstStation
-                )
-            ) {
-                return;
-            }
-        }
-    }
-
-    createLine(
-        firstStation,
-        secondStation
-    );
-}
-
-
-/* =========================================================
-   FIND STATION
-   ========================================================= */
-
-function getStationAt(x, y) {
-
-    for (let i = stations.length - 1; i >= 0; i--) {
-
-        const station = stations[i];
-
-        const dx = station.x - x;
-        const dy = station.y - y;
-
-        if (
-            Math.sqrt(dx * dx + dy * dy)
-            <= STATION_RADIUS + 8
-        ) {
-            return station;
-        }
-    }
-
-    return null;
-}
-
-
-/* =========================================================
-   RAIL PREVIEW
-   ========================================================= */
-
-function drawRailPreview() {
-
-    if (!draggingRail || !railStartStation) {
-        return;
-    }
-
-    ctx.save();
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-        railStartStation.x,
-        railStartStation.y
-    );
-
-    ctx.lineTo(
-        pointerX,
-        pointerY
-    );
-
-    ctx.strokeStyle = "rgba(30, 34, 40, 0.45)";
-
-    ctx.lineWidth = 6;
-
-    ctx.setLineDash([
-        10,
-        8
-    ]);
-
-    ctx.lineCap = "round";
-
-    ctx.stroke();
-
-    ctx.restore();
-}
-
-
-/* =========================================================
-   CLOSEST LINE POINT
-   ========================================================= */
-
-function closestLinePoint(x, y) {
-
-    let closest = null;
-    let closestDistance = Infinity;
-
-    for (const line of lines) {
-
-        for (
-            let i = 0;
-            i < line.stations.length - 1;
-            i++
-        ) {
-
-            const a = line.stations[i];
-            const b = line.stations[i + 1];
-
-            const dx = b.x - a.x;
-            const dy = b.y - a.y;
-
-            const lengthSquared =
-                dx * dx + dy * dy;
-
-            if (lengthSquared === 0) {
-                continue;
-            }
-
-            let t =
-                (
-                    (x - a.x) * dx +
-                    (y - a.y) * dy
-                ) / lengthSquared;
-
-            t = Math.max(
-                0,
-                Math.min(1, t)
-            );
-
-            const px = a.x + dx * t;
-            const py = a.y + dy * t;
-
-            const distX = x - px;
-            const distY = y - py;
-
-            const distance =
-                Math.sqrt(
-                    distX * distX +
-                    distY * distY
-                );
-
-            if (distance < closestDistance) {
-
-                closestDistance = distance;
-
-                closest = {
-                    line,
-                    index: i,
-                    progress: t,
-                    x: px,
-                    y: py
-                };
-            }
-        }
-    }
-
-    return closest;
-}
-
-
-/* =========================================================
-   PLACE TRAIN
-   ========================================================= */
-
-function placeTrain(train, x, y) {
-
-    const station = getStationAt(x, y);
-
-    if (station) {
-
-        train.inDepot = false;
-        train.placed = true;
-
-        train.x = station.x;
-        train.y = station.y;
-
-        train.line = findLineContainingStation(
-            station
-        );
-
-        train.currentIndex =
-            train.line
-                ? train.line.stations.indexOf(station)
-                : 0;
-
-        train.progress = 0;
-
-        train.reverse = false;
-
-        train.angle = 0;
+        week++;
 
         updateStats();
-
-        return;
     }
 
-    const closest = closestLinePoint(x, y);
+    updateWeekProgress();
 
-    if (
-        closest &&
-        closestDistanceToPoint(
-            x,
-            y,
-            closest.x,
-            closest.y
-        ) < 24
-    ) {
 
-        train.inDepot = false;
-        train.placed = true;
+    /* -------------------------
+       RANDOM STATIONS
+    ------------------------- */
 
-        train.line = closest.line;
+    stationSpawnTimer += dt;
 
-        train.currentIndex =
-            closest.index;
+    if (stationSpawnTimer >= nextStationSpawn) {
 
-        train.progress =
-            closest.progress;
+        spawnRandomStation();
 
-        train.x = closest.x;
-        train.y = closest.y;
+        stationSpawnTimer = 0;
 
-        updateTrainAngle(train);
-
-        updateStats();
-
-        return;
+        nextStationSpawn =
+            randomStationSpawnTime();
     }
 
-    // Invalid drop: return to depot.
-    train.inDepot = true;
-    train.placed = false;
 
-    train.x = 65;
-    train.y = 65;
+    /* -------------------------
+       PASSENGERS
+    ------------------------- */
 
-    train.line = null;
+    passengerTimer += dt;
+
+    if (passengerTimer >= PASSENGER_SPAWN_TIME) {
+
+        passengerTimer = 0;
+
+        spawnPassenger();
+    }
+
+
+    /* -------------------------
+       TRAINS
+    ------------------------- */
+
+    updateTrains(dt);
+
+
+    /* -------------------------
+       GAME OVER
+    ------------------------- */
+
+    const totalWaiting =
+        stations.reduce(
+            (sum, station) =>
+                sum + station.waiting.length,
+            0
+        );
+
+    if (totalWaiting >= MAX_WAITING) {
+        endGame();
+    }
 
     updateStats();
-}
-
-
-function closestDistanceToPoint(
-    x1,
-    y1,
-    x2,
-    y2
-) {
-
-    const dx = x1 - x2;
-    const dy = y1 - y2;
-
-    return Math.sqrt(
-        dx * dx +
-        dy * dy
-    );
-}
-
-
-/* =========================================================
-   FIND TRAIN LINE
-   ========================================================= */
-
-function findLineContainingStation(station) {
-
-    for (const line of lines) {
-
-        if (
-            line.stations.includes(station)
-        ) {
-            return line;
-        }
-    }
-
-    return null;
-}
-
-
-/* =========================================================
-   ASSIGN WAITING TRAINS
-   ========================================================= */
-
-function tryAssignWaitingTrains() {
-
-    for (const train of trains) {
-
-        if (
-            !train.placed ||
-            train.line
-        ) {
-            continue;
-        }
-
-        let closestStation = null;
-        let closestDistance = Infinity;
-
-        for (const station of stations) {
-
-            const distance =
-                closestDistanceToPoint(
-                    train.x,
-                    train.y,
-                    station.x,
-                    station.y
-                );
-
-            if (distance < closestDistance) {
-
-                closestDistance = distance;
-
-                closestStation = station;
-            }
-        }
-
-        if (
-            closestStation &&
-            closestDistance < 25
-        ) {
-
-            const line =
-                findLineContainingStation(
-                    closestStation
-                );
-
-            if (line) {
-
-                train.line = line;
-
-                train.currentIndex =
-                    line.stations.indexOf(
-                        closestStation
-                    );
-
-                train.progress = 0;
-
-                train.reverse = false;
-            }
-        }
-    }
-}
-
-
-/* =========================================================
-   TRAIN ANGLE
-   ========================================================= */
-
-function updateTrainAngle(train) {
-
-    if (!train.line) {
-        return;
-    }
-
-    const line = train.line;
-
-    if (
-        line.stations.length < 2
-    ) {
-        return;
-    }
-
-    let index =
-        train.currentIndex;
-
-    if (
-        train.reverse
-    ) {
-
-        index =
-            Math.max(
-                0,
-                index - 1
-            );
-    }
-
-    if (
-        index >= line.stations.length - 1
-    ) {
-
-        index =
-            line.stations.length - 2;
-    }
-
-    const a =
-        line.stations[index];
-
-    const b =
-        line.stations[index + 1];
-
-    if (!a || !b) {
-        return;
-    }
-
-    let angle =
-        Math.atan2(
-            b.y - a.y,
-            b.x - a.x
-        );
-
-    if (train.reverse) {
-        angle += Math.PI;
-    }
-
-    train.angle = angle;
-}
-
-
-/* =========================================================
-   DRAW TRAIN
-   ========================================================= */
-
-function drawTrainShape(
-    x,
-    y,
-    angle,
-    scale = 1
-) {
-
-    ctx.save();
-
-    ctx.translate(x, y);
-    ctx.rotate(angle);
-
-    const width = 30 * scale;
-    const height = 13 * scale;
-
-    // Train body.
-    ctx.fillStyle = COLORS.train;
-
-    ctx.beginPath();
-
-    ctx.roundRect(
-        -width / 2,
-        -height / 2,
-        width - 5 * scale,
-        height,
-        3 * scale
-    );
-
-    ctx.fill();
-
-    // Pointed front.
-    ctx.beginPath();
-
-    ctx.moveTo(
-        width / 2 - 5 * scale,
-        -height / 2
-    );
-
-    ctx.lineTo(
-        width / 2,
-        0
-    );
-
-    ctx.lineTo(
-        width / 2 - 5 * scale,
-        height / 2
-    );
-
-    ctx.closePath();
-
-    ctx.fillStyle = COLORS.train;
-
-    ctx.fill();
-
-    // Windows.
-    ctx.fillStyle = COLORS.trainWindow;
-
-    ctx.fillRect(
-        -width / 2 + 5 * scale,
-        -3.5 * scale,
-        5 * scale,
-        7 * scale
-    );
-
-    ctx.fillRect(
-        1 * scale,
-        -3.5 * scale,
-        5 * scale,
-        7 * scale
-    );
-
-    ctx.restore();
-}
-
-
-/* =========================================================
-   DRAW TRAINS
-   ========================================================= */
-
-function drawTrains() {
-
-    for (const train of trains) {
-
-        if (train.inDepot) {
-            continue;
-        }
-
-        drawTrainShape(
-            train.x,
-            train.y,
-            train.angle
-        );
-
-        if (train.boarding) {
-
-            ctx.beginPath();
-
-            ctx.arc(
-                train.x,
-                train.y,
-                21,
-                0,
-                Math.PI * 2
-            );
-
-            ctx.strokeStyle =
-                "rgba(30, 34, 40, 0.25)";
-
-            ctx.lineWidth = 2;
-
-            ctx.stroke();
-        }
-    }
-}
-
-
-/* =========================================================
-   DRAW TRAIN DEPOT
-   ========================================================= */
-
-function drawDepot() {
-
-    const train =
-        trains.find(
-            t => t.inDepot
-        );
-
-    if (!train) {
-        return;
-    }
-
-    ctx.save();
-
-    ctx.fillStyle =
-        "rgba(255,255,255,0.82)";
-
-    ctx.strokeStyle =
-        "rgba(28,31,36,0.16)";
-
-    ctx.lineWidth = 1;
-
-    ctx.beginPath();
-
-    ctx.roundRect(
-        18,
-        18,
-        150,
-        78,
-        14
-    );
-
-    ctx.fill();
-    ctx.stroke();
-
-    drawTrainShape(
-        58,
-        53,
-        0,
-        1.1
-    );
-
-    ctx.fillStyle = COLORS.text;
-
-    ctx.font =
-        "600 11px Poppins, sans-serif";
-
-    ctx.textAlign = "left";
-
-    ctx.fillText(
-        "AVAILABLE TRAIN",
-        82,
-        48
-    );
-
-    ctx.fillStyle = COLORS.muted;
-
-    ctx.font =
-        "10px Poppins, sans-serif";
-
-    ctx.fillText(
-        "Drag onto a station",
-        82,
-        66
-    );
-
-    ctx.fillText(
-        "or an existing rail",
-        82,
-        81
-    );
-
-    ctx.restore();
-}
-
-
-/* =========================================================
-   TRAIN HIT TEST
-   ========================================================= */
-
-function getDepotTrainAt(x, y) {
-
-    for (const train of trains) {
-
-        if (!train.inDepot) {
-            continue;
-        }
-
-        if (
-            x >= 30 &&
-            x <= 85 &&
-            y >= 35 &&
-            y <= 70
-        ) {
-            return train;
-        }
-    }
-
-    return null;
 }
 
 
@@ -1354,65 +466,61 @@ function getDepotTrainAt(x, y) {
    TRAIN MOVEMENT
    ========================================================= */
 
+/*
+    Each train moves along a segment.
+
+    Example:
+
+    A ---- B ---- C ---- D
+
+    segmentIndex = 0
+    progress = 0.5
+
+    means the train is halfway between A and B.
+
+    direction = 1
+        A → B
+
+    direction = -1
+        B → A
+
+    At the end of the line, the direction flips.
+    The train NEVER teleports back to the beginning.
+*/
+
 function updateTrains(dt) {
 
     for (const train of trains) {
 
-        if (
-            !train.placed ||
-            !train.line
-        ) {
-            continue;
-        }
+        if (!train.placed) continue;
+        if (!train.line) continue;
 
-        const line = train.line;
-
-        if (
-            line.stations.length < 2
-        ) {
-            continue;
-        }
-
-        // Boarding happens in real time.
         if (train.boarding) {
 
             train.boardingTimer -= dt;
 
-            if (
-                train.boardingTimer <= 0
-            ) {
-
+            if (train.boardingTimer <= 0) {
                 boardNextPassenger(train);
-
             }
 
+            continue;
+        }
+
+        if (train.line.stations.length < 2) {
             continue;
         }
 
         let remainingDistance =
             TRAIN_SPEED * dt;
 
-        while (
-            remainingDistance > 0
-        ) {
+
+        while (remainingDistance > 0) {
 
             const segment =
                 getTrainSegment(train);
 
             if (!segment) {
-
-                // End of line.
-                train.reverse =
-                    !train.reverse;
-
-                const newSegment =
-                    getTrainSegment(train);
-
-                if (!newSegment) {
-                    break;
-                }
-
-                continue;
+                break;
             }
 
             const dx =
@@ -1424,68 +532,62 @@ function updateTrains(dt) {
                 segment.from.y;
 
             const segmentLength =
-                Math.sqrt(
-                    dx * dx +
-                    dy * dy
-                );
+                Math.sqrt(dx * dx + dy * dy);
 
-            if (
-                segmentLength <= 0
-            ) {
+            if (segmentLength <= 0) {
                 break;
             }
 
-            let distanceRemaining;
 
-            if (!train.reverse) {
+            const distanceToStation =
+                train.direction === 1
+                    ? segmentLength *
+                      (1 - train.progress)
+                    : segmentLength *
+                      train.progress;
 
-                distanceRemaining =
-                    segmentLength *
-                    (1 - train.progress);
-            }
-
-            else {
-
-                distanceRemaining =
-                    segmentLength *
-                    train.progress;
-            }
 
             const movement =
                 Math.min(
                     remainingDistance,
-                    distanceRemaining
+                    distanceToStation
                 );
 
+
             const progressChange =
-                movement /
-                segmentLength;
+                movement / segmentLength;
 
-            if (!train.reverse) {
 
-                train.progress +=
-                    progressChange;
-            }
+            train.progress +=
+                train.direction *
+                progressChange;
 
-            else {
-
-                train.progress -=
-                    progressChange;
-            }
 
             remainingDistance -= movement;
 
+
             updateTrainPosition(train);
+
+
+            /*
+                We reached the next station.
+            */
 
             if (
                 movement >=
-                distanceRemaining - 0.0001
+                distanceToStation - 0.0001
             ) {
 
-                arriveAtStation(
-                    train,
-                    segment
-                );
+                arriveAtStation(train);
+
+                /*
+                    If passengers are boarding,
+                    stop moving until boarding finishes.
+                */
+
+                if (train.boarding) {
+                    break;
+                }
             }
         }
 
@@ -1495,64 +597,34 @@ function updateTrains(dt) {
 
 
 /* =========================================================
-   TRAIN SEGMENT
+   GET CURRENT TRAIN SEGMENT
    ========================================================= */
 
 function getTrainSegment(train) {
 
+    if (!train.line) return null;
+
     const line = train.line;
 
-    if (!line) {
+    const from =
+        line.stations[train.segmentIndex];
+
+    const to =
+        line.stations[train.segmentIndex + 1];
+
+    if (!from || !to) {
         return null;
     }
 
-    if (!train.reverse) {
-
-        if (
-            train.currentIndex >=
-            line.stations.length - 1
-        ) {
-            return null;
-        }
-
-        return {
-            from:
-                line.stations[
-                    train.currentIndex
-                ],
-
-            to:
-                line.stations[
-                    train.currentIndex + 1
-                ]
-        };
-    }
-
-    else {
-
-        if (
-            train.currentIndex <= 0
-        ) {
-            return null;
-        }
-
-        return {
-            from:
-                line.stations[
-                    train.currentIndex
-                ],
-
-            to:
-                line.stations[
-                    train.currentIndex - 1
-                ]
-        };
-    }
+    return {
+        from,
+        to
+    };
 }
 
 
 /* =========================================================
-   TRAIN POSITION
+   UPDATE TRAIN POSITION
    ========================================================= */
 
 function updateTrainPosition(train) {
@@ -1560,24 +632,19 @@ function updateTrainPosition(train) {
     const segment =
         getTrainSegment(train);
 
-    if (!segment) {
-        return;
-    }
+    if (!segment) return;
+
+    const a = segment.from;
+    const b = segment.to;
 
     train.x =
-        segment.from.x +
-        (
-            segment.to.x -
-            segment.from.x
-        ) *
+        a.x +
+        (b.x - a.x) *
         train.progress;
 
     train.y =
-        segment.from.y +
-        (
-            segment.to.y -
-            segment.from.y
-        ) *
+        a.y +
+        (b.y - a.y) *
         train.progress;
 
     updateTrainAngle(train);
@@ -1585,53 +652,162 @@ function updateTrainPosition(train) {
 
 
 /* =========================================================
-   ARRIVE AT STATION
+   TRAIN ANGLE
    ========================================================= */
 
-function arriveAtStation(
-    train,
-    segment
-) {
+function updateTrainAngle(train) {
+
+    const segment =
+        getTrainSegment(train);
+
+    if (!segment) return;
+
+    const dx =
+        segment.to.x -
+        segment.from.x;
+
+    const dy =
+        segment.to.y -
+        segment.from.y;
+
+    let angle =
+        Math.atan2(dy, dx);
+
+    if (train.direction === -1) {
+        angle += Math.PI;
+    }
+
+    train.angle = angle;
+}
+
+
+/* =========================================================
+   TRAIN ARRIVAL
+   ========================================================= */
+
+function arriveAtStation(train) {
+
+    const line = train.line;
 
     let station;
 
-    if (!train.reverse) {
+    if (train.direction === 1) {
 
-        station = segment.to;
+        station =
+            line.stations[
+                train.segmentIndex + 1
+            ];
 
-        train.currentIndex++;
+    } else {
 
+        station =
+            line.stations[
+                train.segmentIndex
+            ];
     }
 
-    else {
+    if (!station) return;
 
-        station = segment.to;
 
-        train.currentIndex--;
-    }
-
-    train.progress = 0;
+    /* Snap exactly onto station */
 
     train.x = station.x;
     train.y = station.y;
+
+
+    /* Unload passengers */
 
     unloadPassengers(
         train,
         station
     );
 
+
+    /* Start boarding */
+
     if (
         train.passengers.length <
-        TRAIN_CAPACITY &&
+            TRAIN_CAPACITY &&
         station.waiting.length > 0
     ) {
 
         train.boarding = true;
 
+        train.boardingStation =
+            station;
+
         train.boardingTimer =
             BOARDING_TIME_PER_PASSENGER;
 
+    } else {
+
+        train.boarding = false;
+        train.boardingStation = null;
     }
+
+
+    /*
+        Prepare the next segment.
+
+        IMPORTANT:
+        We do NOT reset the train.
+
+        At the end:
+
+        A → B → C → D
+                      ↓
+        A ← B ← C ← D
+
+        It reverses smoothly.
+    */
+
+    if (train.direction === 1) {
+
+        if (
+            train.segmentIndex >=
+            line.stations.length - 2
+        ) {
+
+            /*
+                We reached the final station.
+
+                Stay on the final segment,
+                but reverse direction.
+            */
+
+            train.direction = -1;
+
+            train.progress = 1;
+
+        } else {
+
+            train.segmentIndex++;
+
+            train.progress = 0;
+        }
+
+    } else {
+
+        if (train.segmentIndex <= 0) {
+
+            /*
+                We reached the first station.
+
+                Reverse and travel forward again.
+            */
+
+            train.direction = 1;
+
+            train.progress = 0;
+
+        } else {
+
+            train.segmentIndex--;
+
+            train.progress = 1;
+        }
+    }
+
 
     updateTrainAngle(train);
 
@@ -1640,7 +816,7 @@ function arriveAtStation(
 
 
 /* =========================================================
-   UNLOAD
+   UNLOAD PASSENGERS
    ========================================================= */
 
 function unloadPassengers(
@@ -1648,42 +824,41 @@ function unloadPassengers(
     station
 ) {
 
-    const before =
-        train.passengers.length;
+    const remaining = [];
 
-    train.passengers =
-        train.passengers.filter(
-            passenger => {
+    for (const passenger of train.passengers) {
 
-                if (
-                    passenger.destination ===
-                    station
-                ) {
+        if (
+            passenger.destination === station
+        ) {
 
-                    score++;
+            score++;
 
-                    return false;
-                }
+        } else {
 
-                return true;
-            }
-        );
-
-    if (
-        train.passengers.length !==
-        before
-    ) {
-
-        updateStats();
+            remaining.push(passenger);
+        }
     }
+
+    train.passengers = remaining;
 }
 
 
 /* =========================================================
-   BOARD NEXT PASSENGER
+   BOARD PASSENGER
    ========================================================= */
 
 function boardNextPassenger(train) {
+
+    const station =
+        train.boardingStation;
+
+    if (!station) {
+
+        train.boarding = false;
+        return;
+    }
+
 
     if (
         train.passengers.length >=
@@ -1691,48 +866,40 @@ function boardNextPassenger(train) {
     ) {
 
         train.boarding = false;
+        train.boardingStation = null;
 
         return;
     }
 
-    const station =
-        getTrainStation(
-            train
-        );
 
-    if (!station) {
+    if (station.waiting.length === 0) {
 
         train.boarding = false;
+        train.boardingStation = null;
 
         return;
     }
 
-    if (
-        station.waiting.length === 0
-    ) {
-
-        train.boarding = false;
-
-        return;
-    }
 
     const passenger =
         station.waiting.shift();
+
 
     const passengerIndex =
         passengers.indexOf(passenger);
 
     if (passengerIndex !== -1) {
-
         passengers.splice(
             passengerIndex,
             1
         );
     }
 
+
     train.passengers.push(
         passenger
     );
+
 
     if (
         train.passengers.length <
@@ -1743,73 +910,821 @@ function boardNextPassenger(train) {
         train.boardingTimer =
             BOARDING_TIME_PER_PASSENGER;
 
-    }
-
-    else {
+    } else {
 
         train.boarding = false;
+        train.boardingStation = null;
     }
+
 
     updateStats();
 }
 
 
 /* =========================================================
-   GET TRAIN STATION
+   TRAIN PLACEMENT
    ========================================================= */
 
-function getTrainStation(train) {
+function placeTrain(
+    train,
+    x,
+    y
+) {
 
-    if (!train.line) {
-        return null;
+    const station =
+        getStationAt(x, y);
+
+    if (station) {
+
+        const line =
+            lines.find(l =>
+                l.stations.includes(station)
+            );
+
+
+        train.placed = true;
+        train.inDepot = false;
+
+        train.x = station.x;
+        train.y = station.y;
+
+        train.line = line || null;
+
+        train.boarding = false;
+        train.boardingStation = null;
+
+
+        if (line) {
+
+            setTrainAtStation(
+                train,
+                station,
+                line
+            );
+
+        } else {
+
+            train.segmentIndex = 0;
+            train.progress = 0;
+            train.direction = 1;
+            train.angle = 0;
+        }
+
+
+        tryAssignWaitingTrains();
+
+        updateStats();
+        draw();
+
+        return;
     }
 
-    if (
-        train.currentIndex < 0 ||
-        train.currentIndex >=
-            train.line.stations.length
-    ) {
-        return null;
+
+    /*
+        Try placing train directly onto
+        an existing rail.
+    */
+
+    const closest =
+        findClosestPointOnAnyLine(
+            x,
+            y
+        );
+
+
+    if (closest) {
+
+        train.placed = true;
+        train.inDepot = false;
+
+        train.line = closest.line;
+
+        train.segmentIndex =
+            closest.index;
+
+        train.progress =
+            closest.progress;
+
+        train.direction = 1;
+
+        train.x = closest.x;
+        train.y = closest.y;
+
+        train.boarding = false;
+        train.boardingStation = null;
+
+        updateTrainAngle(train);
+
+        updateStats();
+        draw();
+
+        return;
     }
 
-    return train.line.stations[
-        train.currentIndex
-    ];
+
+    /*
+        Invalid drop:
+        return train to depot.
+    */
+
+    train.x = 65;
+    train.y = 70;
+
+    train.placed = false;
+    train.inDepot = true;
+
+    train.line = null;
+
+    train.boarding = false;
+    train.boardingStation = null;
+
+    updateStats();
+    draw();
 }
 
 
 /* =========================================================
-   POINTER DOWN
+   PUT TRAIN AT STATION
+   ========================================================= */
+
+function setTrainAtStation(
+    train,
+    station,
+    line
+) {
+
+    const index =
+        line.stations.indexOf(station);
+
+    if (index <= 0) {
+
+        train.segmentIndex = 0;
+        train.progress = 0;
+        train.direction = 1;
+
+    } else if (
+        index >=
+        line.stations.length - 1
+    ) {
+
+        train.segmentIndex =
+            line.stations.length - 2;
+
+        train.progress = 1;
+        train.direction = -1;
+
+    } else {
+
+        train.segmentIndex = index;
+        train.progress = 0;
+        train.direction = 1;
+    }
+
+
+    updateTrainPosition(train);
+}
+
+
+/* =========================================================
+   FIND CLOSEST LINE POINT
+   ========================================================= */
+
+function findClosestPointOnAnyLine(
+    x,
+    y
+) {
+
+    let closest = null;
+    let closestDistance = Infinity;
+
+
+    for (const line of lines) {
+
+        for (
+            let i = 0;
+            i < line.stations.length - 1;
+            i++
+        ) {
+
+            const a =
+                line.stations[i];
+
+            const b =
+                line.stations[i + 1];
+
+
+            const result =
+                closestPointOnSegment(
+                    x,
+                    y,
+                    a.x,
+                    a.y,
+                    b.x,
+                    b.y
+                );
+
+
+            if (
+                result.distance <
+                closestDistance
+            ) {
+
+                closestDistance =
+                    result.distance;
+
+                closest = {
+                    line,
+                    index: i,
+                    progress: result.progress,
+                    x: result.x,
+                    y: result.y
+                };
+            }
+        }
+    }
+
+
+    if (
+        closest &&
+        closestDistance < 25
+    ) {
+        return closest;
+    }
+
+    return null;
+}
+
+
+function closestPointOnSegment(
+    px,
+    py,
+    ax,
+    ay,
+    bx,
+    by
+) {
+
+    const dx = bx - ax;
+    const dy = by - ay;
+
+    const lengthSquared =
+        dx * dx + dy * dy;
+
+    if (lengthSquared === 0) {
+
+        const distance =
+            Math.hypot(
+                px - ax,
+                py - ay
+            );
+
+        return {
+            x: ax,
+            y: ay,
+            progress: 0,
+            distance
+        };
+    }
+
+
+    let t =
+        (
+            (px - ax) * dx +
+            (py - ay) * dy
+        ) /
+        lengthSquared;
+
+
+    t = Math.max(
+        0,
+        Math.min(1, t)
+    );
+
+
+    const x =
+        ax + dx * t;
+
+    const y =
+        ay + dy * t;
+
+
+    return {
+        x,
+        y,
+        progress: t,
+        distance: Math.hypot(
+            px - x,
+            py - y
+        )
+    };
+}
+
+
+/* =========================================================
+   AUTO ASSIGN TRAINS
+   ========================================================= */
+
+function tryAssignWaitingTrains() {
+
+    for (const train of trains) {
+
+        if (!train.placed) continue;
+
+        if (train.line) continue;
+
+        const station =
+            getStationAt(
+                train.x,
+                train.y
+            );
+
+        if (!station) continue;
+
+
+        const line =
+            lines.find(l =>
+                l.stations.includes(station)
+            );
+
+        if (!line) continue;
+
+
+        train.line = line;
+
+        setTrainAtStation(
+            train,
+            station,
+            line
+        );
+
+        updateTrainAngle(train);
+    }
+}
+
+
+/* =========================================================
+   LINE CREATION
+   ========================================================= */
+
+function createLine(
+    firstStation,
+    secondStation
+) {
+
+    const line = {
+
+        id:
+            Date.now() +
+            Math.random(),
+
+        /*
+            IMPORTANT:
+            This color is stored permanently
+            on this line.
+
+            It will NOT be recalculated later.
+        */
+
+        color:
+            LINE_COLORS[
+                nextLineColorIndex %
+                LINE_COLORS.length
+            ],
+
+        stations: [
+            firstStation,
+            secondStation
+        ]
+    };
+
+
+    nextLineColorIndex++;
+
+
+    lines.push(line);
+
+    tryAssignWaitingTrains();
+
+    updateStats();
+    draw();
+}
+
+
+/* =========================================================
+   CONNECT / EXTEND LINES
+   ========================================================= */
+
+function connectStations(
+    firstStation,
+    secondStation
+) {
+
+    if (!firstStation) return;
+    if (!secondStation) return;
+
+    if (
+        firstStation ===
+        secondStation
+    ) {
+        return;
+    }
+
+
+    /*
+        Try extending an existing line.
+    */
+
+    for (const line of lines) {
+
+        const firstIndex =
+            line.stations.indexOf(
+                firstStation
+            );
+
+        const secondIndex =
+            line.stations.indexOf(
+                secondStation
+            );
+
+
+        if (
+            firstIndex !== -1 &&
+            secondIndex === -1
+        ) {
+
+            /*
+                Extend at beginning.
+            */
+
+            if (firstIndex === 0) {
+
+                const oldFirst =
+                    line.stations[0];
+
+                line.stations.unshift(
+                    secondStation
+                );
+
+
+                /*
+                    Repair train segment indexes.
+
+                    If a train was sitting at
+                    the old first station,
+                    make it travel toward the
+                    new station.
+                */
+
+                for (const train of trains) {
+
+                    if (
+                        train.line !== line
+                    ) {
+                        continue;
+                    }
+
+
+                    const atOldFirst =
+                        Math.hypot(
+                            train.x -
+                                oldFirst.x,
+                            train.y -
+                                oldFirst.y
+                        ) < 2;
+
+
+                    if (atOldFirst) {
+
+                        train.segmentIndex = 0;
+                        train.progress = 1;
+                        train.direction = -1;
+
+                    } else {
+
+                        train.segmentIndex++;
+                    }
+
+
+                    updateTrainPosition(train);
+                }
+
+
+                tryAssignWaitingTrains();
+
+                updateStats();
+                draw();
+
+                return;
+            }
+
+
+            /*
+                Extend at end.
+            */
+
+            if (
+                firstIndex ===
+                line.stations.length - 1
+            ) {
+
+                const oldLast =
+                    line.stations[
+                        line.stations.length - 1
+                    ];
+
+
+                line.stations.push(
+                    secondStation
+                );
+
+
+                for (const train of trains) {
+
+                    if (
+                        train.line !== line
+                    ) {
+                        continue;
+                    }
+
+
+                    const atOldLast =
+                        Math.hypot(
+                            train.x -
+                                oldLast.x,
+                            train.y -
+                                oldLast.y
+                        ) < 2;
+
+
+                    if (atOldLast) {
+
+                        train.segmentIndex =
+                            line.stations.length - 2;
+
+                        train.progress = 0;
+                        train.direction = 1;
+
+                    }
+
+
+                    updateTrainPosition(train);
+                }
+
+
+                tryAssignWaitingTrains();
+
+                updateStats();
+                draw();
+
+                return;
+            }
+        }
+    }
+
+
+    /*
+        Don't create duplicate rail segments.
+    */
+
+    for (const line of lines) {
+
+        for (
+            let i = 0;
+            i < line.stations.length - 1;
+            i++
+        ) {
+
+            const a =
+                line.stations[i];
+
+            const b =
+                line.stations[i + 1];
+
+
+            if (
+                (
+                    a === firstStation &&
+                    b === secondStation
+                ) ||
+                (
+                    a === secondStation &&
+                    b === firstStation
+                )
+            ) {
+                return;
+            }
+        }
+    }
+
+
+    /*
+        Otherwise create a brand-new line.
+    */
+
+    createLine(
+        firstStation,
+        secondStation
+    );
+}
+
+
+/* =========================================================
+   REMOVE RAIL
+   ========================================================= */
+
+function removeRailAt(x, y) {
+
+    for (let li = lines.length - 1; li >= 0; li--) {
+
+        const line = lines[li];
+
+        for (
+            let i = 0;
+            i < line.stations.length - 1;
+            i++
+        ) {
+
+            const a =
+                line.stations[i];
+
+            const b =
+                line.stations[i + 1];
+
+
+            const closest =
+                closestPointOnSegment(
+                    x,
+                    y,
+                    a.x,
+                    a.y,
+                    b.x,
+                    b.y
+                );
+
+
+            if (closest.distance < 12) {
+
+                /*
+                    Remove the entire line if
+                    it only contains two stations.
+                */
+
+                if (
+                    line.stations.length <= 2
+                ) {
+
+                    for (const train of trains) {
+
+                        if (
+                            train.line === line
+                        ) {
+
+                            train.line = null;
+                            train.segmentIndex = 0;
+                            train.progress = 0;
+                            train.direction = 1;
+                        }
+                    }
+
+
+                    lines.splice(li, 1);
+
+                } else {
+
+                    /*
+                        For now, remove the segment
+                        by splitting the line.
+
+                        Left side stays as the original
+                        line color.
+                    */
+
+                    const leftStations =
+                        line.stations.slice(
+                            0,
+                            i + 1
+                        );
+
+                    const rightStations =
+                        line.stations.slice(
+                            i + 1
+                        );
+
+
+                    lines.splice(
+                        li,
+                        1
+                    );
+
+
+                    if (
+                        leftStations.length >= 2
+                    ) {
+
+                        lines.push({
+                            id:
+                                Date.now() +
+                                Math.random(),
+
+                            color:
+                                line.color,
+
+                            stations:
+                                leftStations
+                        });
+                    }
+
+
+                    if (
+                        rightStations.length >= 2
+                    ) {
+
+                        lines.push({
+                            id:
+                                Date.now() +
+                                Math.random(),
+
+                            color:
+                                line.color,
+
+                            stations:
+                                rightStations
+                        });
+                    }
+
+
+                    /*
+                        Trains that were on the
+                        removed line need to be detached.
+                    */
+
+                    for (const train of trains) {
+
+                        if (
+                            train.line === line
+                        ) {
+
+                            train.line = null;
+                        }
+                    }
+                }
+
+
+                updateStats();
+                draw();
+
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+
+/* =========================================================
+   INPUT
    ========================================================= */
 
 canvas.addEventListener(
     "pointerdown",
     event => {
 
-        if (
-            paused ||
-            gameOver
-        ) {
+        if (paused || gameOver) return;
+
+        const pos =
+            getCanvasPosition(event);
+
+        pointerX = pos.x;
+        pointerY = pos.y;
+
+
+        /*
+            Right-click:
+            delete rail.
+        */
+
+        if (event.button === 2) {
+
+            removeRailAt(
+                pointerX,
+                pointerY
+            );
+
             return;
         }
 
-        const rect =
-            canvas.getBoundingClientRect();
 
-        pointerX =
-            event.clientX -
-            rect.left;
+        /*
+            Check depot train first.
+        */
 
-        pointerY =
-            event.clientY -
-            rect.top;
-
-        // Check the train depot first.
         const depotTrain =
             getDepotTrainAt(
                 pointerX,
                 pointerY
             );
+
 
         if (depotTrain) {
 
@@ -1823,12 +1738,17 @@ canvas.addEventListener(
             return;
         }
 
-        // Otherwise start drawing a rail.
+
+        /*
+            Start rail drawing.
+        */
+
         const station =
             getStationAt(
                 pointerX,
                 pointerY
             );
+
 
         if (station) {
 
@@ -1847,24 +1767,16 @@ canvas.addEventListener(
 );
 
 
-/* =========================================================
-   POINTER MOVE
-   ========================================================= */
-
 canvas.addEventListener(
     "pointermove",
     event => {
 
-        const rect =
-            canvas.getBoundingClientRect();
+        const pos =
+            getCanvasPosition(event);
 
-        pointerX =
-            event.clientX -
-            rect.left;
+        pointerX = pos.x;
+        pointerY = pos.y;
 
-        pointerY =
-            event.clientY -
-            rect.top;
 
         if (draggingTrain) {
 
@@ -1879,36 +1791,41 @@ canvas.addEventListener(
             return;
         }
 
-        if (draggingRail) {
 
+        if (draggingRail) {
             draw();
         }
     }
 );
 
 
-/* =========================================================
-   POINTER UP
-   ========================================================= */
-
 canvas.addEventListener(
     "pointerup",
     event => {
 
+        const pos =
+            getCanvasPosition(event);
+
+        pointerX = pos.x;
+        pointerY = pos.y;
+
+
         if (draggingTrain) {
 
+            const train =
+                draggingTrain;
+
+            draggingTrain = null;
+
             placeTrain(
-                draggingTrain,
+                train,
                 pointerX,
                 pointerY
             );
 
-            draggingTrain = null;
-
-            draw();
-
             return;
         }
+
 
         if (draggingRail) {
 
@@ -1918,10 +1835,10 @@ canvas.addEventListener(
                     pointerY
                 );
 
+
             if (
                 endStation &&
-                endStation !==
-                    railStartStation
+                railStartStation
             ) {
 
                 connectStations(
@@ -1930,8 +1847,8 @@ canvas.addEventListener(
                 );
             }
 
-            draggingRail = false;
 
+            draggingRail = false;
             railStartStation = null;
 
             draw();
@@ -1940,282 +1857,793 @@ canvas.addEventListener(
 );
 
 
-/* =========================================================
-   RIGHT CLICK — DELETE RAIL SECTION
-   ========================================================= */
-
 canvas.addEventListener(
     "contextmenu",
     event => {
-
         event.preventDefault();
-
-        if (
-            paused ||
-            gameOver
-        ) {
-            return;
-        }
-
-        const rect =
-            canvas.getBoundingClientRect();
-
-        const x =
-            event.clientX -
-            rect.left;
-
-        const y =
-            event.clientY -
-            rect.top;
-
-        removeRailAt(x, y);
     }
 );
 
 
 /* =========================================================
-   REMOVE RAIL
+   CANVAS POSITION
    ========================================================= */
 
-function removeRailAt(x, y) {
+function getCanvasPosition(event) {
 
-    const closest =
-        closestLinePoint(x, y);
+    const rect =
+        canvas.getBoundingClientRect();
 
-    if (
-        !closest ||
-        closestDistanceToPoint(
-            x,
-            y,
-            closest.x,
-            closest.y
-        ) > 18
+    return {
+        x:
+            event.clientX -
+            rect.left,
+
+        y:
+            event.clientY -
+            rect.top
+    };
+}
+
+
+/* =========================================================
+   STATION HIT TEST
+   ========================================================= */
+
+function getStationAt(x, y) {
+
+    for (
+        let i = stations.length - 1;
+        i >= 0;
+        i--
     ) {
-        return;
-    }
 
-    const line =
-        closest.line;
+        const station =
+            stations[i];
 
-    const index =
-        closest.index;
-
-    if (
-        line.stations.length <= 2
-    ) {
-
-        const lineIndex =
-            lines.indexOf(line);
-
-        if (lineIndex !== -1) {
-
-            lines.splice(
-                lineIndex,
-                1
+        const distance =
+            Math.hypot(
+                x - station.x,
+                y - station.y
             );
-        }
 
-    }
-
-    else if (
-        index === 0
-    ) {
-
-        line.stations.shift();
-
-    }
-
-    else {
-
-        line.stations.splice(
-            index + 1
-        );
-    }
-
-    // Make sure the train doesn't reference
-    // a line that no longer exists.
-    for (const train of trains) {
 
         if (
-            train.line === line &&
-            !lines.includes(line)
+            distance <=
+            STATION_RADIUS + 8
         ) {
-
-            train.line = null;
+            return station;
         }
     }
 
-    updateStats();
-
-    draw();
+    return null;
 }
 
 
 /* =========================================================
-   UPDATE GAME
+   DEPOT TRAIN HIT TEST
    ========================================================= */
 
-function update(dt) {
+function getDepotTrainAt(x, y) {
 
-    if (
-        paused ||
-        gameOver
-    ) {
-        return;
+    for (const train of trains) {
+
+        if (!train.inDepot) continue;
+
+        /*
+            Larger hitbox than the actual train.
+        */
+
+        if (
+            x >= 25 &&
+            x <= 105 &&
+            y >= 30 &&
+            y <= 110
+        ) {
+            return train;
+        }
     }
 
-    // -----------------------------------------
-    // WEEK
-    // -----------------------------------------
-
-    weekTimer += dt;
-
-    if (
-        weekTimer >= WEEK_DURATION
-    ) {
-
-        weekTimer -= WEEK_DURATION;
-
-        week++;
-
-        updateStats();
-    }
-
-    // -----------------------------------------
-    // STATION SPAWNING
-    // -----------------------------------------
-
-    stationSpawnTimer += dt;
-
-    if (
-        stationSpawnTimer >=
-        nextStationSpawn
-    ) {
-
-        spawnRandomStation();
-
-        stationSpawnTimer = 0;
-
-        nextStationSpawn =
-            randomStationSpawnTime();
-    }
-
-    // -----------------------------------------
-    // PASSENGERS
-    // -----------------------------------------
-
-    passengerTimer += dt;
-
-    if (
-        passengerTimer >=
-        PASSENGER_SPAWN_TIME
-    ) {
-
-        passengerTimer = 0;
-
-        spawnPassenger();
-    }
-
-    // -----------------------------------------
-    // TRAIN
-    // -----------------------------------------
-
-    updateTrains(dt);
-
-    // -----------------------------------------
-    // GAME OVER
-    // -----------------------------------------
-
-    const waiting =
-        passengers.length;
-
-    if (
-        waiting >= MAX_WAITING
-    ) {
-
-        endGame();
-    }
+    return null;
 }
 
 
 /* =========================================================
-   WEEK BAR
-   ========================================================= */
-
-function updateWeekProgress() {
-
-    if (!weekProgressFill) {
-        return;
-    }
-
-    const percentage =
-        Math.min(
-            100,
-            (
-                weekTimer /
-                WEEK_DURATION
-            ) * 100
-        );
-
-    weekProgressFill.style.width =
-        `${percentage}%`;
-
-    if (weekProgressPercent) {
-
-        weekProgressPercent.textContent =
-            `${Math.floor(percentage)}%`;
-    }
-}
-
-
-/* =========================================================
-   DRAW EVERYTHING
+   DRAW
    ========================================================= */
 
 function draw() {
 
-    const w = canvas.clientWidth;
-    const h = canvas.clientHeight;
-
     ctx.clearRect(
         0,
         0,
-        w,
-        h
+        canvas.width,
+        canvas.height
     );
 
-    // Background.
+
     ctx.fillStyle =
         COLORS.background;
 
     ctx.fillRect(
         0,
         0,
-        w,
-        h
+        canvas.width,
+        canvas.height
     );
 
+
     drawLines();
+
+    drawLinePreview();
 
     drawStations();
 
     drawTrains();
 
-    // Draw dragged train.
-    if (draggingTrain) {
+    drawDepot();
+}
 
-        drawTrainShape(
-            draggingTrain.x,
-            draggingTrain.y,
-            0
+
+/* =========================================================
+   DRAW LINES
+   ========================================================= */
+
+function drawLines() {
+
+    for (const line of lines) {
+
+        if (
+            line.stations.length < 2
+        ) {
+            continue;
+        }
+
+
+        /*
+            IMPORTANT:
+            The entire line is drawn using
+            its stored permanent color.
+        */
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            line.stations[0].x,
+            line.stations[0].y
+        );
+
+
+        for (
+            let i = 1;
+            i < line.stations.length;
+            i++
+        ) {
+
+            ctx.lineTo(
+                line.stations[i].x,
+                line.stations[i].y
+            );
+        }
+
+
+        ctx.strokeStyle =
+            line.color;
+
+        ctx.lineWidth = 7;
+
+        ctx.lineCap =
+            "round";
+
+        ctx.lineJoin =
+            "round";
+
+        ctx.stroke();
+    }
+}
+
+
+/* =========================================================
+   DRAW LINE PREVIEW
+   ========================================================= */
+
+function drawLinePreview() {
+
+    if (
+        !draggingRail ||
+        !railStartStation
+    ) {
+        return;
+    }
+
+
+    ctx.save();
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        railStartStation.x,
+        railStartStation.y
+    );
+
+    ctx.lineTo(
+        pointerX,
+        pointerY
+    );
+
+
+    ctx.strokeStyle =
+        "rgba(48,52,59,0.35)";
+
+    ctx.lineWidth = 5;
+
+    ctx.setLineDash([
+        8,
+        8
+    ]);
+
+    ctx.lineCap =
+        "round";
+
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+
+/* =========================================================
+   DRAW STATIONS
+   ========================================================= */
+
+function drawStations() {
+
+    for (const station of stations) {
+
+        drawStationShape(
+            station.x,
+            station.y,
+            station.type
+        );
+
+
+        /*
+            Draw waiting passengers.
+        */
+
+        if (
+            station.waiting.length > 0
+        ) {
+
+            drawWaitingPassengers(
+                station
+            );
+        }
+    }
+}
+
+
+/* =========================================================
+   STATION SHAPE
+   ========================================================= */
+
+function drawStationShape(
+    x,
+    y,
+    type
+) {
+
+    ctx.save();
+
+    ctx.fillStyle =
+        COLORS.stationFill;
+
+    ctx.strokeStyle =
+        COLORS.stationStroke;
+
+    ctx.lineWidth = 3;
+
+
+    ctx.beginPath();
+
+
+    if (type === "circle") {
+
+        ctx.arc(
+            x,
+            y,
+            STATION_RADIUS,
+            0,
+            Math.PI * 2
+        );
+
+    } else if (type === "triangle") {
+
+        const size =
+            STATION_RADIUS * 1.2;
+
+        ctx.moveTo(
+            x,
+            y - size
+        );
+
+        ctx.lineTo(
+            x + size,
+            y + size
+        );
+
+        ctx.lineTo(
+            x - size,
+            y + size
+        );
+
+        ctx.closePath();
+
+    } else {
+
+        const size =
+            STATION_RADIUS;
+
+        ctx.rect(
+            x - size,
+            y - size,
+            size * 2,
+            size * 2
         );
     }
 
-    drawDepot();
 
-    drawRailPreview();
+    ctx.fill();
+    ctx.stroke();
 
-    updateWeekProgress();
+    ctx.restore();
+}
+
+
+/* =========================================================
+   WAITING PASSENGERS
+   ========================================================= */
+
+function drawWaitingPassengers(
+    station
+) {
+
+    const maxVisible =
+        Math.min(
+            station.waiting.length,
+            6
+        );
+
+
+    for (
+        let i = 0;
+        i < maxVisible;
+        i++
+    ) {
+
+        const passenger =
+            station.waiting[i];
+
+        const angle =
+            (Math.PI * 2 / maxVisible) *
+            i;
+
+        const radius = 25;
+
+
+        const x =
+            station.x +
+            Math.cos(angle) *
+            radius;
+
+        const y =
+            station.y +
+            Math.sin(angle) *
+            radius;
+
+
+        drawDestinationIcon(
+            x,
+            y,
+            passenger.destination.type,
+            4
+        );
+    }
+}
+
+
+/* =========================================================
+   DESTINATION ICON
+   ========================================================= */
+
+function drawDestinationIcon(
+    x,
+    y,
+    type,
+    size = 5
+) {
+
+    ctx.save();
+
+    ctx.fillStyle =
+        COLORS.passenger;
+
+    ctx.strokeStyle =
+        COLORS.passenger;
+
+    ctx.lineWidth = 1.5;
+
+
+    ctx.beginPath();
+
+
+    if (type === "circle") {
+
+        ctx.arc(
+            x,
+            y,
+            size,
+            0,
+            Math.PI * 2
+        );
+
+    } else if (type === "triangle") {
+
+        ctx.moveTo(
+            x,
+            y - size
+        );
+
+        ctx.lineTo(
+            x + size,
+            y + size
+        );
+
+        ctx.lineTo(
+            x - size,
+            y + size
+        );
+
+        ctx.closePath();
+
+    } else {
+
+        ctx.rect(
+            x - size,
+            y - size,
+            size * 2,
+            size * 2
+        );
+    }
+
+
+    ctx.fill();
+
+    ctx.restore();
+}
+
+
+/* =========================================================
+   DRAW TRAINS
+   ========================================================= */
+
+function drawTrains() {
+
+    for (const train of trains) {
+
+        /*
+            Don't draw the depot copy while
+            the train is being dragged.
+        */
+
+        if (
+            train === draggingTrain
+        ) {
+            continue;
+        }
+
+
+        if (
+            !train.placed &&
+            !train.inDepot
+        ) {
+            continue;
+        }
+
+
+        drawTrainShape(
+            train.x,
+            train.y,
+            train.angle,
+            train.placed ? 1 : 1.15
+        );
+
+
+        /*
+            Passenger destination icons
+            inside the train.
+        */
+
+        if (
+            train.placed &&
+            train.passengers.length > 0
+        ) {
+
+            drawTrainPassengers(
+                train
+            );
+        }
+    }
+}
+
+
+/* =========================================================
+   TRAIN SHAPE
+   ========================================================= */
+
+function drawTrainShape(
+    x,
+    y,
+    angle,
+    scale = 1
+) {
+
+    ctx.save();
+
+    ctx.translate(
+        x,
+        y
+    );
+
+    ctx.rotate(angle);
+
+
+    const width =
+        34 * scale;
+
+    const height =
+        15 * scale;
+
+
+    /*
+        Main rectangular body.
+    */
+
+    ctx.fillStyle =
+        COLORS.train;
+
+    ctx.beginPath();
+
+    ctx.roundRect(
+        -width / 2,
+        -height / 2,
+        width - 6 * scale,
+        height,
+        3 * scale
+    );
+
+    ctx.fill();
+
+
+    /*
+        Pointed front.
+    */
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        width / 2 - 6 * scale,
+        -height / 2
+    );
+
+    ctx.lineTo(
+        width / 2,
+        0
+    );
+
+    ctx.lineTo(
+        width / 2 - 6 * scale,
+        height / 2
+    );
+
+    ctx.closePath();
+
+    ctx.fillStyle =
+        COLORS.train;
+
+    ctx.fill();
+
+
+    /*
+        Windows.
+    */
+
+    ctx.fillStyle =
+        COLORS.trainWindow;
+
+    ctx.fillRect(
+        -width / 2 +
+            5 * scale,
+        -3.5 * scale,
+        5 * scale,
+        7 * scale
+    );
+
+    ctx.fillRect(
+        1 * scale,
+        -3.5 * scale,
+        5 * scale,
+        7 * scale
+    );
+
+
+    ctx.restore();
+}
+
+
+/* =========================================================
+   TRAIN PASSENGERS
+   ========================================================= */
+
+function drawTrainPassengers(
+    train
+) {
+
+    ctx.save();
+
+    ctx.translate(
+        train.x,
+        train.y
+    );
+
+    ctx.rotate(
+        train.angle
+    );
+
+
+    const visible =
+        Math.min(
+            train.passengers.length,
+            TRAIN_CAPACITY
+        );
+
+
+    for (
+        let i = 0;
+        i < visible;
+        i++
+    ) {
+
+        const passenger =
+            train.passengers[i];
+
+        const x =
+            -8 +
+            i * 3;
+
+        const y = 0;
+
+
+        drawDestinationIcon(
+            x,
+            y,
+            passenger.destination.type,
+            2
+        );
+    }
+
+
+    ctx.restore();
+}
+
+
+/* =========================================================
+   DEPOT
+   ========================================================= */
+
+function drawDepot() {
+
+    const train =
+        trains.find(t =>
+            t.inDepot
+        );
+
+
+    if (!train) return;
+
+    /*
+        Don't draw the train inside the
+        depot while it is being dragged.
+    */
+
+    if (
+        train === draggingTrain
+    ) {
+        return;
+    }
+
+
+    ctx.save();
+
+
+    /*
+        BIGGER DEPOT BOX
+    */
+
+    ctx.fillStyle =
+        "rgba(255,255,255,0.88)";
+
+    ctx.strokeStyle =
+        "rgba(28,31,36,0.16)";
+
+    ctx.lineWidth = 1;
+
+
+    ctx.beginPath();
+
+    ctx.roundRect(
+        18,
+        18,
+        220,
+        105,
+        16
+    );
+
+    ctx.fill();
+    ctx.stroke();
+
+
+    /*
+        Train
+    */
+
+    drawTrainShape(
+        65,
+        70,
+        0,
+        1.25
+    );
+
+
+    /*
+        Text
+    */
+
+    ctx.fillStyle =
+        COLORS.text;
+
+    ctx.font =
+        "600 12px Poppins, sans-serif";
+
+    ctx.textAlign =
+        "left";
+
+    ctx.fillText(
+        "AVAILABLE TRAIN",
+        105,
+        55
+    );
+
+
+    ctx.fillStyle =
+        COLORS.muted;
+
+    ctx.font =
+        "10px Poppins, sans-serif";
+
+    ctx.fillText(
+        "Drag onto a station",
+        105,
+        75
+    );
+
+    ctx.fillText(
+        "or an existing rail",
+        105,
+        91
+    );
+
+
+    ctx.restore();
 }
 
 
@@ -2225,63 +2653,66 @@ function draw() {
 
 function updateStats() {
 
-    if (scoreEl) {
-        scoreEl.textContent =
-            score;
-    }
-
     if (weekEl) {
         weekEl.textContent =
             `Week ${week}`;
     }
 
+    if (scoreEl) {
+        scoreEl.textContent =
+            score;
+    }
+
+
+    const waiting =
+        stations.reduce(
+            (sum, station) =>
+                sum +
+                station.waiting.length,
+            0
+        );
+
+
     if (waitingEl) {
         waitingEl.textContent =
-            passengers.length;
+            waiting;
     }
+
 
     if (stationCountEl) {
         stationCountEl.textContent =
             stations.length;
     }
 
+
     if (trainCountEl) {
+
+        const placedTrains =
+            trains.filter(
+                train => train.placed
+            ).length;
+
         trainCountEl.textContent =
-            trains.length;
+            placedTrains;
     }
+
 
     if (lineCountEl) {
         lineCountEl.textContent =
             lines.length;
     }
 
+
     if (lineStatusEl) {
 
-        if (lines.length === 0) {
-
-            lineStatusEl.textContent =
-                "Drag between stations to build a rail";
-
-        }
-
-        else if (
-            trains.some(
-                train =>
-                    train.placed &&
-                    train.line
-            )
-        ) {
-
-            lineStatusEl.textContent =
-                "Train running";
-
-        }
-
-        else {
-
-            lineStatusEl.textContent =
-                "Drag the train onto a rail";
-        }
+        lineStatusEl.textContent =
+            lines.length === 0
+                ? "No lines"
+                : `${lines.length} line${
+                    lines.length === 1
+                        ? ""
+                        : "s"
+                } active`;
     }
 }
 
@@ -2295,67 +2726,15 @@ function endGame() {
     gameOver = true;
 
     if (finalScoreEl) {
-
         finalScoreEl.textContent =
             score;
     }
 
     if (gameOverEl) {
-
         gameOverEl.classList.add(
             "show"
         );
     }
-}
-
-
-/* =========================================================
-   RESTART
-   ========================================================= */
-
-function restartGame() {
-
-    score = 0;
-
-    week = 1;
-
-    weekTimer = 0;
-
-    passengerTimer = 0;
-
-    stationSpawnTimer = 0;
-
-    nextStationSpawn =
-        randomStationSpawnTime();
-
-    passengers = [];
-
-    lines = [];
-
-    draggingRail = false;
-
-    railStartStation = null;
-
-    draggingTrain = null;
-
-    gameOver = false;
-
-    paused = false;
-
-    createInitialStations();
-
-    createInitialTrain();
-
-    if (gameOverEl) {
-
-        gameOverEl.classList.remove(
-            "show"
-        );
-    }
-
-    updateStats();
-
-    draw();
 }
 
 
@@ -2384,7 +2763,21 @@ if (restartBtn) {
 
     restartBtn.addEventListener(
         "click",
-        restartGame
+        () => {
+
+            initGame();
+
+            if (pauseBtn) {
+                pauseBtn.textContent =
+                    "Pause";
+            }
+
+            if (gameOverEl) {
+                gameOverEl.classList.remove(
+                    "show"
+                );
+            }
+        }
     );
 }
 
@@ -2393,7 +2786,21 @@ if (playAgainBtn) {
 
     playAgainBtn.addEventListener(
         "click",
-        restartGame
+        () => {
+
+            initGame();
+
+            if (pauseBtn) {
+                pauseBtn.textContent =
+                    "Pause";
+            }
+
+            if (gameOverEl) {
+                gameOverEl.classList.remove(
+                    "show"
+                );
+            }
+        }
     );
 }
 
@@ -2423,20 +2830,21 @@ function gameLoop(now) {
 
 
 /* =========================================================
+   RESIZE
+   ========================================================= */
+
+window.addEventListener(
+    "resize",
+    resizeCanvas
+);
+
+
+/* =========================================================
    START
    ========================================================= */
 
-createWeekProgressBar();
-
 resizeCanvas();
-
-createInitialStations();
-
-createInitialTrain();
-
-updateStats();
-
-draw();
+initGame();
 
 requestAnimationFrame(
     gameLoop
