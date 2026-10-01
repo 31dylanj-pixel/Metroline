@@ -1,37 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Orbitron:wght@500;600;700&family=Poppins:wght@400;500;600&display=swap');
 /* =========================================================
-   MINI METRO STYLE GAME
-   COMPLETE CSS
-   ========================================================= */
-
-
-/* =========================================================
-   ROOT
+   METROLINE
    ========================================================= */
 
 :root {
-    --background: #0b1016;
-    --background-2: #111821;
+    --bg: #0b1016;
+    --bg-light: #121a22;
 
     --panel: rgba(255, 255, 255, 0.055);
-    --panel-strong: rgba(255, 255, 255, 0.085);
+    --panel-hover: rgba(255, 255, 255, 0.08);
 
-    --border: rgba(255, 255, 255, 0.09);
-    --border-strong: rgba(255, 255, 255, 0.15);
+    --border: rgba(255, 255, 255, 0.10);
 
-    --text: #f5f7fa;
-    --muted: #9ca7b3;
+    --text: #f4f6f8;
+    --muted: #8d98a4;
 
-    --accent: #e8edf2;
+    --red: #ef4444;
 
     --shadow:
-        0 20px 60px rgba(0, 0, 0, 0.35);
-
-    --radius: 18px;
+        0 18px 50px rgba(0, 0, 0, 0.30);
 }
 
 
 /* =========================================================
-   GLOBAL
+   RESET
    ========================================================= */
 
 * {
@@ -40,128 +32,183 @@
 
 html,
 body {
+    width: 100%;
+    height: 100%;
+
     margin: 0;
     padding: 0;
-    width: 100%;
-    min-height: 100%;
 
+    overflow: hidden;
+}
+
+body {
     font-family: "Poppins", sans-serif;
+
+    color: var(--text);
 
     background:
         radial-gradient(
-            circle at 20% 10%,
-            rgba(70, 90, 110, 0.13),
+            circle at 20% 15%,
+            rgba(65, 82, 100, 0.16),
             transparent 35%
         ),
         radial-gradient(
-            circle at 80% 90%,
-            rgba(30, 50, 70, 0.16),
+            circle at 80% 85%,
+            rgba(30, 50, 70, 0.18),
             transparent 35%
         ),
         linear-gradient(
             135deg,
-            var(--background),
-            var(--background-2)
+            var(--bg),
+            var(--bg-light)
         );
-
-    color: var(--text);
-}
-
-body {
-    min-height: 100vh;
-    overflow-x: hidden;
-}
-
-button,
-input {
-    font: inherit;
 }
 
 
 /* =========================================================
-   GAME WRAPPER
+   MAIN GAME
    ========================================================= */
 
-.game {
+#game {
     width: 100%;
-    min-height: 100vh;
+    height: 100vh;
 
     display: flex;
     flex-direction: column;
+
+    overflow: hidden;
 }
 
 
 /* =========================================================
-   TOP HUD
+   TOP BAR
    ========================================================= */
 
 .topbar {
     position: relative;
     z-index: 20;
 
+    flex: 0 0 auto;
+
     width: 100%;
+
+    min-height: 76px;
 
     display: flex;
     align-items: center;
-    justify-content: space-between;
 
-    padding: 16px 22px;
+    padding: 12px 20px;
 
-    background: rgba(9, 13, 18, 0.78);
+    background:
+        rgba(9, 13, 18, 0.88);
 
     border-bottom: 1px solid var(--border);
 
+    box-shadow:
+        0 8px 30px rgba(0, 0, 0, 0.18);
+
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
-
-    box-shadow:
-        0 8px 30px rgba(0, 0, 0, 0.16);
 }
 
 
 /* =========================================================
-   HUD SECTIONS
+   BRAND
+   ========================================================= */
+
+.brand {
+    display: flex;
+    align-items: center;
+
+    gap: 11px;
+
+    min-width: 220px;
+}
+
+.brand-dot {
+    width: 13px;
+    height: 13px;
+
+    flex: 0 0 13px;
+
+    border-radius: 50%;
+
+    background: var(--red);
+
+    box-shadow:
+        0 0 16px rgba(239, 68, 68, 0.55);
+}
+
+.brand h1 {
+    margin: 0;
+
+    font-family: "Montserrat", sans-serif;
+
+    font-size: 17px;
+
+    font-weight: 700;
+
+    letter-spacing: 0.10em;
+}
+
+.brand p {
+    margin: 2px 0 0;
+
+    font-size: 9px;
+
+    color: var(--muted);
+
+    letter-spacing: 0.06em;
+
+    text-transform: uppercase;
+}
+
+
+/* =========================================================
+   STATS
    ========================================================= */
 
 .stats {
     display: flex;
     align-items: center;
-    gap: 10px;
 
-    flex-wrap: wrap;
+    gap: 8px;
+
+    margin: 0 auto;
 }
 
 .stat {
     min-width: 82px;
 
-    padding: 8px 13px;
-
-    border-radius: 12px;
-
-    background: var(--panel);
-
-    border: 1px solid var(--border);
+    padding: 7px 12px;
 
     display: flex;
     flex-direction: column;
 
     gap: 1px;
+
+    border-radius: 11px;
+
+    background:
+        var(--panel);
+
+    border: 1px solid var(--border);
+
+    text-align: center;
 }
 
-.stat-label {
-    font-size: 9px;
-
-    text-transform: uppercase;
-
-    letter-spacing: 0.12em;
-
-    color: var(--muted);
+.stat span {
+    font-size: 8px;
 
     font-weight: 600;
+
+    letter-spacing: 0.10em;
+
+    color: var(--muted);
 }
 
-.stat-value {
-    font-size: 17px;
+.stat strong {
+    font-size: 16px;
 
     line-height: 1.2;
 
@@ -172,68 +219,293 @@ input {
 
 
 /* =========================================================
-   LINE STATUS
+   CONTROLS
    ========================================================= */
 
-#lineStatus {
+.controls {
+    min-width: 220px;
+
+    display: flex;
+    justify-content: flex-end;
+
+    gap: 8px;
+}
+
+.controls button {
+    padding: 8px 14px;
+
+    border-radius: 10px;
+
+    border: 1px solid var(--border);
+
+    background:
+        rgba(255, 255, 255, 0.055);
+
+    color: var(--text);
+
+    font-family: "Poppins", sans-serif;
+
+    font-size: 11px;
+
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background 0.18s ease,
+        border-color 0.18s ease,
+        transform 0.18s ease;
+}
+
+.controls button:hover {
+    background:
+        rgba(255, 255, 255, 0.10);
+
+    border-color:
+        rgba(255, 255, 255, 0.18);
+
+    transform: translateY(-1px);
+}
+
+.controls button:active {
+    transform: translateY(0);
+}
+
+
+/* =========================================================
+   GAME AREA
+   ========================================================= */
+
+#gameArea {
+    position: relative;
+
+    flex: 1 1 auto;
+
+    min-height: 0;
+
+    width: 100%;
+
+    overflow: hidden;
+
+    display: flex;
+}
+
+
+/* =========================================================
+   CANVAS
+   ========================================================= */
+
+#canvas {
+    display: block;
+
+    width: 100%;
+    height: 100%;
+
+    flex: 1;
+
+    background:
+        radial-gradient(
+            circle at center,
+            rgba(255, 255, 255, 0.018),
+            transparent 65%
+        );
+
+    cursor: default;
+}
+
+
+/* =========================================================
+   INSTRUCTIONS
+   ========================================================= */
+
+#instructions {
+    position: absolute;
+
+    left: 50%;
+    bottom: 22px;
+
+    transform: translateX(-50%);
+
+    z-index: 5;
+
     display: flex;
     align-items: center;
 
     gap: 8px;
 
-    padding: 0 4px;
+    padding: 9px 15px;
+
+    border-radius: 999px;
+
+    background:
+        rgba(12, 17, 23, 0.78);
+
+    border: 1px solid var(--border);
+
+    box-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.22);
+
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+
+    white-space: nowrap;
+
+    pointer-events: none;
+}
+
+#instructions strong {
+    font-size: 10px;
+
+    font-weight: 700;
+
+    color: #f2f4f6;
+}
+
+#instructions span {
+    font-size: 10px;
+
+    color: var(--muted);
+}
+
+
+/* =========================================================
+   BOTTOM PANEL
+   ========================================================= */
+
+.bottom-panel {
+    position: relative;
+    z-index: 20;
+
+    flex: 0 0 auto;
+
+    min-height: 70px;
+
+    width: 100%;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 11px 20px;
+
+    background:
+        rgba(9, 13, 18, 0.90);
+
+    border-top: 1px solid var(--border);
+
+    box-shadow:
+        0 -8px 30px rgba(0, 0, 0, 0.16);
+
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+
+
+/* =========================================================
+   LINE INFO
+   ========================================================= */
+
+.line-info {
+    display: flex;
+    align-items: center;
+
+    gap: 11px;
+}
+
+.line-color {
+    width: 13px;
+    height: 13px;
+
+    flex: 0 0 13px;
+
+    border-radius: 50%;
+
+    background: var(--red);
+
+    box-shadow:
+        0 0 13px rgba(239, 68, 68, 0.45);
+}
+
+.line-info > div:last-child {
+    display: flex;
+    flex-direction: column;
+
+    gap: 1px;
+}
+
+.line-info strong {
+    font-family: "Montserrat", sans-serif;
+
+    font-size: 11px;
+
+    letter-spacing: 0.08em;
+}
+
+#lineStatus {
+    font-size: 9px;
+
+    color: var(--muted);
+}
+
+
+/* =========================================================
+   LINE DOTS
+   ========================================================= */
+
+#lineStatus:has(.line-dot) {
+    display: flex;
+    align-items: center;
+
+    gap: 7px;
 }
 
 .line-dot {
-    width: 12px;
-    height: 12px;
+    width: 11px;
+    height: 11px;
 
-    flex: 0 0 auto;
+    display: inline-block;
+
+    flex: 0 0 11px;
 
     border-radius: 50%;
 
     background: var(--line-color);
 
-    display: inline-block;
-
     cursor: pointer;
 
-    border: 2px solid transparent;
+    opacity: 1;
 
     transition:
         transform 0.18s ease,
         opacity 0.18s ease,
-        box-shadow 0.18s ease,
-        border-color 0.18s ease;
+        box-shadow 0.18s ease;
+}
+
+.line-dot.locked {
+    background: #68717a;
+
+    opacity: 0.20;
+
+    cursor: default;
+
+    box-shadow: none;
 }
 
 .line-dot.unlocked {
     opacity: 1;
 }
 
-.line-dot.locked {
-    opacity: 0.18;
-
-    background: #69717a;
-
-    box-shadow: none;
-
-    cursor: default;
-}
-
 .line-dot.used {
     box-shadow:
-        0 0 0 2px rgba(255, 255, 255, 0.08);
+        0 0 0 2px rgba(255, 255, 255, 0.07);
 }
 
 .line-dot.selected {
-    transform: scale(1.28);
-
-    border-color: rgba(255, 255, 255, 0.85);
+    transform: scale(1.3);
 
     box-shadow:
-        0 0 0 3px rgba(255, 255, 255, 0.08),
-        0 0 14px var(--line-color);
+        0 0 0 2px rgba(255, 255, 255, 0.85),
+        0 0 12px var(--line-color);
 }
 
 .line-dot.unlocked:hover {
@@ -242,192 +514,36 @@ input {
 
 
 /* =========================================================
-   WEEK PROGRESS
+   NETWORK INFO
    ========================================================= */
 
-.week-progress {
-    position: absolute;
-
-    left: 0;
-    right: 0;
-    bottom: -3px;
-
-    height: 3px;
-
-    overflow: hidden;
-
-    background: rgba(255, 255, 255, 0.055);
-}
-
-.week-progress-fill {
-    height: 100%;
-
-    width: 0%;
-
-    background: rgba(255, 255, 255, 0.85);
-
-    transition:
-        width 0.15s linear;
-}
-
-
-/* =========================================================
-   GAME AREA
-   ========================================================= */
-
-.game-area {
-    position: relative;
-
-    flex: 1;
-
-    width: 100%;
-
-    min-height: 0;
-
+.network-info {
     display: flex;
-    justify-content: center;
     align-items: center;
 
-    padding: 20px;
+    gap: 20px;
 }
 
-
-/* =========================================================
-   CANVAS
-   ========================================================= */
-
-canvas {
-    display: block;
-
-    width: 100%;
-    height: 100%;
-
-    max-width: 1400px;
-
-    border-radius: 22px;
-
-    background:
-        radial-gradient(
-            circle at center,
-            rgba(255, 255, 255, 0.025),
-            transparent 65%
-        ),
-        rgba(8, 12, 17, 0.65);
-
-    border: 1px solid var(--border);
-
-    box-shadow:
-        var(--shadow);
-
-    cursor: default;
-}
-
-
-/* =========================================================
-   DEPOT
-   ========================================================= */
-
-.depot {
-    position: absolute;
-
-    left: 32px;
-    top: 32px;
-
-    width: 250px;
-
-    min-height: 125px;
-
-    padding: 18px;
-
-    border-radius: 18px;
-
-    background:
-        linear-gradient(
-            145deg,
-            rgba(255, 255, 255, 0.085),
-            rgba(255, 255, 255, 0.035)
-        );
-
-    border: 1px solid var(--border-strong);
-
-    box-shadow:
-        0 15px 45px rgba(0, 0, 0, 0.24);
-
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-
-    user-select: none;
-}
-
-.depot-title {
+.network-info span {
     font-size: 10px;
-
-    font-weight: 700;
-
-    letter-spacing: 0.14em;
-
-    text-transform: uppercase;
 
     color: var(--muted);
 }
 
-.depot-subtitle {
-    margin-top: 4px;
+.network-info strong {
+    margin-left: 3px;
 
-    font-size: 11px;
+    color: var(--text);
 
-    color: #77828e;
+    font-weight: 600;
 }
 
 
 /* =========================================================
-   TRAIN PLACEMENT
+   GAME OVER OVERLAY
    ========================================================= */
 
-.train-placement {
-    pointer-events: none;
-}
-
-.placement-ring {
-    position: absolute;
-
-    width: 54px;
-    height: 54px;
-
-    border-radius: 50%;
-
-    border: 2px dashed rgba(255, 255, 255, 0.6);
-
-    transform: translate(-50%, -50%);
-
-    animation:
-        placementPulse 1.2s ease-in-out infinite;
-}
-
-@keyframes placementPulse {
-
-    0% {
-        opacity: 0.45;
-        transform: translate(-50%, -50%) scale(0.9);
-    }
-
-    50% {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1);
-    }
-
-    100% {
-        opacity: 0.45;
-        transform: translate(-50%, -50%) scale(0.9);
-    }
-}
-
-
-/* =========================================================
-   WEEKLY CHOICE OVERLAY
-   ========================================================= */
-
-#weeklyChoice {
+.overlay {
     position: fixed;
 
     inset: 0;
@@ -435,276 +551,161 @@ canvas {
     z-index: 9999;
 
     display: flex;
-
     align-items: center;
     justify-content: center;
 
     padding: 20px;
 
     background:
-        rgba(4, 7, 11, 0.64);
+        rgba(4, 7, 11, 0.68);
 
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
-
-    animation:
-        weeklyOverlayIn 0.25s ease;
 }
 
-@keyframes weeklyOverlayIn {
-
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
+.overlay.hidden {
+    display: none;
 }
 
 
 /* =========================================================
-   WEEKLY CARD
+   GAME OVER CARD
    ========================================================= */
 
-.weekly-choice-card {
-    width: min(580px, 100%);
+.gameover-card {
+    width: min(460px, calc(100vw - 40px));
 
-    padding: 34px;
+    padding: 32px;
 
-    border-radius: 24px;
+    border-radius: 22px;
 
     background:
         linear-gradient(
             145deg,
-            rgba(30, 38, 48, 0.97),
-            rgba(14, 19, 25, 0.97)
+            rgba(31, 39, 49, 0.97),
+            rgba(13, 18, 24, 0.97)
         );
 
-    border: 1px solid rgba(255, 255, 255, 0.13);
+    border: 1px solid rgba(255, 255, 255, 0.12);
 
     box-shadow:
-        0 35px 100px rgba(0, 0, 0, 0.5);
+        0 30px 90px rgba(0, 0, 0, 0.48);
 
     text-align: center;
-
-    animation:
-        weeklyCardIn 0.35s cubic-bezier(
-            0.2,
-            0.8,
-            0.2,
-            1
-        );
 }
 
-@keyframes weeklyCardIn {
+.gameover-card .eyebrow {
+    margin: 0 0 8px;
 
-    from {
-        opacity: 0;
-        transform: translateY(18px) scale(0.97);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
-
-
-/* =========================================================
-   WEEKLY TEXT
-   ========================================================= */
-
-.weekly-choice-kicker {
-    margin-bottom: 8px;
-
-    font-size: 10px;
+    font-size: 9px;
 
     font-weight: 700;
 
-    letter-spacing: 0.18em;
+    letter-spacing: 0.17em;
 
-    text-transform: uppercase;
-
-    color: #87919c;
+    color: #8d98a4;
 }
 
-.weekly-choice-card h2 {
+.gameover-card h2 {
     margin: 0;
 
     font-family: "Montserrat", sans-serif;
 
-    font-size: 29px;
+    font-size: 27px;
 
-    font-weight: 700;
-
-    letter-spacing: -0.025em;
-
-    color: #ffffff;
+    letter-spacing: -0.02em;
 }
 
-.weekly-choice-description {
-    max-width: 430px;
+.gameover-card > p:not(.eyebrow) {
+    margin: 10px auto 24px;
 
-    margin: 11px auto 26px;
+    max-width: 350px;
 
-    font-size: 13px;
+    font-size: 12px;
 
-    line-height: 1.7;
+    line-height: 1.6;
 
-    color: #9da7b2;
+    color: var(--muted);
 }
 
 
 /* =========================================================
-   WEEKLY OPTIONS
+   FINAL SCORE
    ========================================================= */
 
-.weekly-choice-options {
-    display: grid;
+.final-score {
+    padding: 15px;
 
-    grid-template-columns: 1fr 1fr;
+    margin-bottom: 18px;
 
-    gap: 12px;
-}
-
-
-/* =========================================================
-   WEEKLY OPTION BUTTON
-   ========================================================= */
-
-.weekly-choice-option {
-    min-height: 104px;
-
-    padding: 17px;
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 14px;
-
-    text-align: left;
-
-    border-radius: 17px;
-
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
 
     background:
         rgba(255, 255, 255, 0.045);
 
-    color: #ffffff;
-
-    cursor: pointer;
-
-    transition:
-        background 0.2s ease,
-        border-color 0.2s ease,
-        transform 0.2s ease,
-        box-shadow 0.2s ease;
-}
-
-.weekly-choice-option:hover {
-    transform: translateY(-2px);
-
-    background:
-        rgba(255, 255, 255, 0.075);
-
-    border-color:
-        rgba(255, 255, 255, 0.2);
-
-    box-shadow:
-        0 12px 30px rgba(0, 0, 0, 0.2);
-}
-
-.weekly-choice-option:active {
-    transform: translateY(0);
-}
-
-
-/* =========================================================
-   CHOICE ICONS
-   ========================================================= */
-
-.choice-icon {
-    width: 36px;
-    height: 36px;
-
-    flex: 0 0 36px;
-
-    border-radius: 50%;
-
-    background: var(--choice-color);
-
-    box-shadow:
-        0 0 18px color-mix(
-            in srgb,
-            var(--choice-color),
-            transparent 65%
-        );
-}
-
-.choice-train-icon {
-    width: 36px;
-    height: 36px;
-
-    flex: 0 0 36px;
+    border: 1px solid var(--border);
 
     display: flex;
-
-    align-items: center;
-    justify-content: center;
-
-    border-radius: 50%;
-
-    background:
-        rgba(255, 255, 255, 0.08);
-
-    font-size: 19px;
-}
-
-
-/* =========================================================
-   CHOICE TEXT
-   ========================================================= */
-
-.weekly-choice-option span:last-child {
-    display: flex;
-
     flex-direction: column;
 
     gap: 3px;
 }
 
-.weekly-choice-option strong {
-    font-size: 13px;
+.final-score span {
+    font-size: 9px;
 
-    font-weight: 700;
+    color: var(--muted);
 
-    color: #f5f7fa;
+    text-transform: uppercase;
+
+    letter-spacing: 0.10em;
 }
 
-.weekly-choice-option small {
-    font-size: 10px;
+.final-score strong {
+    font-family: "Montserrat", sans-serif;
 
-    line-height: 1.45;
-
-    color: #89939e;
+    font-size: 25px;
 }
 
 
 /* =========================================================
-   BUTTONS
+   PLAY AGAIN
    ========================================================= */
 
-button {
-    -webkit-tap-highlight-color: transparent;
+#playAgain {
+    width: 100%;
+
+    padding: 11px 16px;
+
+    border: 0;
+
+    border-radius: 11px;
+
+    background: #f1f3f5;
+
+    color: #10151b;
+
+    font-family: "Poppins", sans-serif;
+
+    font-size: 11px;
+
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        transform 0.18s ease,
+        opacity 0.18s ease;
 }
 
-button:focus-visible {
-    outline: 2px solid rgba(255, 255, 255, 0.7);
+#playAgain:hover {
+    transform: translateY(-1px);
 
-    outline-offset: 3px;
+    opacity: 0.9;
+}
+
+#playAgain:active {
+    transform: translateY(0);
 }
 
 
@@ -712,117 +713,140 @@ button:focus-visible {
    RESPONSIVE
    ========================================================= */
 
-@media (max-width: 850px) {
+@media (max-width: 800px) {
 
     .topbar {
-        align-items: flex-start;
+        min-height: auto;
 
-        gap: 12px;
+        padding: 10px 14px;
 
-        padding: 13px 15px;
+        gap: 10px;
+    }
+
+    .brand {
+        min-width: auto;
+    }
+
+    .brand h1 {
+        font-size: 14px;
+    }
+
+    .brand p {
+        display: none;
     }
 
     .stats {
-        gap: 7px;
+        gap: 5px;
     }
 
     .stat {
-        min-width: 68px;
+        min-width: 65px;
 
-        padding: 7px 10px;
+        padding: 6px 8px;
     }
 
-    .stat-label {
+    .stat span {
+        font-size: 7px;
+    }
+
+    .stat strong {
+        font-size: 14px;
+    }
+
+    .controls {
+        min-width: auto;
+
+        gap: 5px;
+    }
+
+    .controls button {
+        padding: 7px 10px;
+
+        font-size: 10px;
+    }
+
+    .bottom-panel {
+        min-height: 62px;
+
+        padding: 9px 14px;
+    }
+
+    .network-info {
+        gap: 10px;
+    }
+}
+
+
+@media (max-width: 600px) {
+
+    .topbar {
+        flex-wrap: wrap;
+    }
+
+    .brand {
+        flex: 1;
+    }
+
+    .stats {
+        order: 3;
+
+        width: 100%;
+
+        justify-content: center;
+    }
+
+    .controls {
+        margin-left: auto;
+    }
+
+    .bottom-panel {
+        align-items: flex-start;
+
+        gap: 10px;
+    }
+
+    .network-info {
+        flex-direction: column;
+
+        align-items: flex-end;
+
+        gap: 2px;
+    }
+
+    #instructions {
+        max-width: calc(100% - 30px);
+
+        overflow: hidden;
+
+        text-overflow: ellipsis;
+    }
+}
+
+
+@media (max-width: 420px) {
+
+    .brand h1 {
+        font-size: 12px;
+    }
+
+    .brand-dot {
+        width: 10px;
+        height: 10px;
+    }
+
+    .controls button {
+        padding: 6px 8px;
+    }
+
+    .bottom-panel {
+        padding: 8px 10px;
+    }
+
+    .network-info span {
         font-size: 8px;
     }
 
-    .stat-value {
-        font-size: 15px;
-    }
-
-    .game-area {
-        padding: 12px;
-    }
-
-    canvas {
-        border-radius: 17px;
-    }
-
-    .depot {
-        left: 22px;
-        top: 22px;
-
-        width: 215px;
-
-        min-height: 110px;
-
-        padding: 14px;
-    }
-
-    .weekly-choice-card {
-        padding: 28px 22px;
-    }
-}
-
-
-@media (max-width: 650px) {
-
-    .topbar {
-        flex-direction: column;
-    }
-
-    #lineStatus {
-        width: 100%;
-    }
-
-    .stats {
-        width: 100%;
-    }
-
-    .game-area {
-        padding: 8px;
-    }
-
-    .depot {
-        width: 190px;
-    }
-
-    .weekly-choice-options {
-        grid-template-columns: 1fr;
-    }
-
-    .weekly-choice-card h2 {
-        font-size: 24px;
-    }
-}
-
-
-@media (max-width: 450px) {
-
-    .stat {
-        min-width: 60px;
-    }
-
-    .stat-label {
-        letter-spacing: 0.07em;
-    }
-
-    .depot {
-        left: 14px;
-        top: 14px;
-
-        width: 175px;
-    }
-
-    .weekly-choice-card {
-        padding: 24px 17px;
-
-        border-radius: 20px;
-    }
-
-    .weekly-choice-option {
-        min-height: 90px;
-
-        padding: 14px;
+    .line-info strong {
+        font-size: 9px;
     }
 }
